@@ -16,20 +16,17 @@
   <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
 
+  <!-- (optional) suppress favicon 404 noise -->
+  <link rel="icon" href="data:,">
   <style>
-    /* just to center the smoke-test screen nicely */
     html, body { height: 100%; margin: 0; }
     body { display: flex; align-items: center; justify-content: center; }
   </style>
-
-  <!-- (optional) avoid favicon 404 noise -->
-  <link rel="icon" href="data:,">
 </head>
 <body>
 
-<!-- Minimal one‑screen sanity check -->
+<!-- Minimal sanity check: if this renders, the CDN is correct -->
 <script>
-  // If you see "Hello jsPsych!", the CDN core + plugins loaded correctly.
   const jsPsych = initJsPsych();
   const timeline = [
     { type: jsPsychHtmlButtonResponse, stimulus: 'Hello jsPsych!', choices: ['OK'] }
