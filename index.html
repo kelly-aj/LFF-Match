@@ -152,8 +152,7 @@
     .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
   </style>
 </head>
-<body></body>
-
+<body>
 <script>
 /* ===========================
    Utilities
@@ -485,21 +484,7 @@ function MatchingRetrievalTrial(set) {
             prevSlot.textContent = 'Drop here';
           }
 
-          if (slotToTop[slotIndex] !== null) {
-            slotToTop[slotIndex] = null;
-          }
-
-          slotToTop[slotIndex] = topId;
-          slotEl.classList.add('filled');
-          slotEl.textContent = 'Placed';
-          const bottomId = shuffledBots[slotIndex];
-          selectionMap[topId] = bottomId;
-
-          updateOK();
-        });
-      });
-
-      okBtn.addEventListener('click', () => {
+          if (slotToTop[tener('click', () => {
         if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
         const perItem = shuffledTops.map(topId => {
@@ -535,13 +520,13 @@ function MatchingRetrievalTrial(set) {
         return `
           <div class="top-card ${cls}">
             ${badge}
-            <img src="${row.topId}" alt="${row.topId}">
+            ${row.topId}
           </div>
         `;
       }).join('');
 
       const bottoms = set.bots.map(src => `
-        <div class="img-cell"><img src="${src}" alt="${src}"></div>
+        <div class="img-cell">${src}</div>
       `).join('');
 
       return `
@@ -766,4 +751,5 @@ jsPsych.run(timeline);
 
 */
 </script>
+</body>
 </html>
