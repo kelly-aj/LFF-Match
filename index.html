@@ -1,95 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>LFF Matching Task</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>jsPsych Smoke Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- jsPsych core -->
-  <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" />
-  <script src="https://unpkg.com/jspsych@7.3.3/dist/jspsych.js"></script>
+  <!-- jsPsych core (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
 
-  <!-- Correct UMD plugin builds -->
-  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2/dist/index.browser.js"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.2/dist/index.browser.js"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2/dist/index.browser.js"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.2/dist/index.browser.js"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.2/dist/index.browser.js"></script>
+  <!-- Plugins (CDN) -->
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
 
+  <style>
+    body { display: flex; align-items: center; justify-content: center; height: 100vh; }
+  </style>
 </head>
-<body></body>
+<body>
 
+<!-- Minimal one‑screen sanity check -->
 <script>
-/* ===============================
-   Initialize jsPsych
-================================= */
-const jsPsych = initJsPsych({
-  on_finish: function() {
-    jsPsych.data.displayData();
-  }
-});
-
-/* ===============================
-   Define image sets
-================================= */
-const SETS = [
-  {
-    setId: 'Set1',
-    tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
-    bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
-  }
-];
-
-// Flatten for preload
-const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
-
-/* ===============================
-   Build Timeline
-================================= */
-const timeline = [];
-
-/* ---- Preload images ---- */
-timeline.push({
-  type: jsPsychPreload,
-  images: preload_images
-});
-
-/* ---- Instructions ---- */
-timeline.push({
-  type: jsPsychInstructions,
-  pages: [
-    "<p>Welcome to the experiment.</p><p>Press next to begin.</p>"
-  ],
-  show_clickable_nav: true
-});
-
-/* ---- Test trial ---- */
-timeline.push({
-  type: jsPsychHtmlKeyboardResponse,
-  stimulus: "<p>If you see this screen, jsPsych is working correctly.</p><p>Press any key to continue.</p>"
-});
-
-/* ---- Example button trial ---- */
-timeline.push({
-  type: jsPsychHtmlButtonResponse,
-  stimulus: "<p>Click a button below.</p>",
-  choices: ["Option 1", "Option 2"]
-});
-
-/* ---- Example slider trial ---- */
-timeline.push({
-  type: jsPsychHtmlSliderResponse,
-  stimulus: "<p>Move the slider and press continue.</p>",
-  labels: ["Low", "High"],
-  min: 0,
-  max: 100,
-  start: 50
-});
-
-/* ===============================
-   Run experiment
-================================= */
-jsPsych.run(timeline);
-
+  // If this renders, the CDN core + plugins are loading correctly.
+  const jsPsych = initJsPsych();
+  const timeline = [
+    { type: jsPsychHtmlButtonResponse, stimulus: 'Hello jsPsych!', choices: ['OK'] }
+  ];
+  jsPsych.run(timeline);
 </script>
+
+</body>
 </html>
