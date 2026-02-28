@@ -7,14 +7,14 @@
 
   <!-- jsPsych v7 (CDN) -->
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
-  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script defer src="https://unpkg.com/jspsych@7.3.4"></script>
 
   <!-- Plugins (CDN) -->
-  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
+  <script defer src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+  <script defer src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <script defer src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script defer src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script defer src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
 
   <!-- Stop favicon 404 noise -->
   <link rel="icon" href="data:,">
@@ -81,7 +81,7 @@
 </head>
 <body>
   <script>
-    // --- Error banner so a blank screen still shows what's wrong ---
+    // --- Error banner so a blank screen shows what's wrong ---
     window.addEventListener('error', (e) => {
       const pre = document.createElement('pre');
       pre.textContent = 'Error: ' + e.message;
@@ -94,567 +94,578 @@
       console.error('Global error:', e.message, e.filename, e.lineno, e.colno, e.error);
     });
 
-    /* ===========================
-       Initialize jsPsych FIRST
-       =========================== */
-    const jsPsych = initJsPsych({ on_finish: () => {} });
+    // Wait until all deferred scripts (jsPsych + plugins) are parsed
+    window.addEventListener('DOMContentLoaded', () => {
+      /* ===========================
+         Initialize jsPsych FIRST
+         =========================== */
+      const jsPsych = initJsPsych({ on_finish: () => {} });
 
-    /* ===========================
-       Utilities
-       =========================== */
-    function getQueryParam(name) {
-      const params = new URLSearchParams(window.location.search);
-      return params.get(name) || '';
-    }
-    function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
-
-    /* ===========================
-       Config: Define sets & image paths (PNG)
-       =========================== */
-    const SETS = [
-      { setId: 'Set1',
-        tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
-        bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
-      },
-      { setId: 'Set2',
-        tops: ['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
-        bots: ['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
-      },
-      { setId: 'Set3',
-        tops: ['img/Set3Top1.png','img/Set3Top2.png','img/Set3Top3.png','img/Set3Top4.png'],
-        bots: ['img/Set3Bot1.png','img/Set3Bot2.png','img/Set3Bot3.png','img/Set3Bot4.png']
-      },
-      { setId: 'Set4',
-        tops: ['img/Set4Top1.png','img/Set4Top2.png','img/Set4Top3.png','img/Set4Top4.png'],
-        bots: ['img/Set4Bot1.png','img/Set4Bot2.png','img/Set4Bot3.png','img/Set4Bot4.png']
+      /* ===========================
+         Utilities
+         =========================== */
+      function getQueryParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name) || '';
       }
-    ];
+      function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
 
-    const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
-
-    /* ===========================
-       Storage for ground truths (built after encoding)
-       { setId: { top -> bottom } }
-       =========================== */
-    const GroundTruthBySet = {};
-
-    /* ===========================
-       Derive ground-truth from encoding
-       =========================== */
-    function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-      const topsShuffled = shuffle([...topIds]);
-      const correctTops = topsShuffled.slice(0, 2);
-      const incorrectTops = topsShuffled.slice(2);
-
-      const truth = {};
-      // correct: use participant selection
-      correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
-
-      // incorrect: assign a different bottom (avoid duplicates; fallback if needed)
-      incorrectTops.forEach(tid => {
-        const chosen = selectionMap[tid];
-        const remaining = bottomIds.filter(b => b !== chosen && !Object.values(truth).includes(b));
-        const pool = remaining.length > 0 ? remaining : bottomIds.filter(b => b !== chosen);
-        truth[tid] = jsPsych.randomization.sampleWithoutReplacement(pool, 1)[0];
-      });
-
-      return { groundTruth: truth, correctTops };
-    }
-
-    /* ===========================
-       Encoding trial (drag → slots)
-       =========================== */
-    function MatchingEncodingTrial(set) {
-      const topIds = set.tops;
-      const bottomIds = set.bots;
-
-      const encoding = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: () => {
-          const topPool = topIds.map(src => `
-            <div class="top-card" draggable="true" data-top="${src}">
-              <img src="${src}" alt="">
-            </div>
-          `).join('');
-
-          const slots = bottomIds.map((_, i) => `
-            <div class="drop-slot" data-slot-index="${i}">Drop here</div>
-          `).join('');
-
-          const bottoms = bottomIds.map(src => `
-            <div class="img-cell"><img src="${src}" alt=""></div>
-          `).join('');
-
-          return `
-            <div>
-              <h3 class="row-title">Match Encoding — ${set.setId}</h3>
-              <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-              <div id="top-pool">${topPool}</div>
-              <div class="grid" id="drop-row">${slots}</div>
-              <div class="grid" id="bottom-row">${bottoms}</div>
-              <div class="ok-wrap"><button id="ok-encode" disabled>OK</button></div>
-            </div>
-          `;
+      /* ===========================
+         Config: sets & image paths
+         =========================== */
+      const SETS = [
+        { setId: 'Set1',
+          tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
+          bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
         },
-        choices: [],
-        response_ends_trial: false,
-        on_load: () => {
-          const topCards = Array.from(document.querySelectorAll('.top-card'));
-          const slots = Array.from(document.querySelectorAll('.drop-slot'));
-          const okBtn = document.getElementById('ok-encode');
-
-          const slotToTop = new Array(slots.length).fill(null);
-          const selectionMap = {}; // top -> bottom
-
-          function updateOK() {
-            okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length;
-          }
-
-          topCards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-              e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
-            });
-          });
-
-          slots.forEach((slotEl, slotIndex) => {
-            slotEl.addEventListener('dragover', (e) => e.preventDefault());
-            slotEl.addEventListener('drop', (e) => {
-              e.preventDefault();
-              const topId = e.dataTransfer.getData('text/topId');
-              if (!topId) return;
-
-              const prevSlotIndex = slotToTop.findIndex(t => t === topId);
-              if (prevSlotIndex >= 0) {
-                slotToTop[prevSlotIndex] = null;
-                const prevSlot = slots[prevSlotIndex];
-                prevSlot.classList.remove('filled');
-                prevSlot.textContent = 'Drop here';
-              }
-
-              if (slotToTop[slotIndex] !== null) {
-                slotToTop[slotIndex] = null;
-              }
-
-              slotToTop[slotIndex] = topId;
-              slotEl.classList.add('filled');
-              slotEl.textContent = 'Placed';
-
-              const bottomId = bottomIds[slotIndex];
-              selectionMap[topId] = bottomId;
-
-              updateOK();
-            });
-          });
-
-          okBtn.addEventListener('click', () => {
-            if (slotToTop.filter(x => x !== null).length !== slots.length) return;
-
-            const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
-            GroundTruthBySet[set.setId] = groundTruth;
-
-            jsPsych.finishTrial({
-              setId: set.setId,
-              phase: 'encoding',
-              participantMapping: selectionMap,
-              assignedCorrectTopIds: correctTops,
-              derivedGroundTruth: groundTruth
-            });
-          });
+        { setId: 'Set2',
+          tops: ['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
+          bots: ['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
+        },
+        { setId: 'Set3',
+          tops: ['img/Set3Top1.png','img/Set3Top2.png','img/Set3Top3.png','img/Set3Top4.png'],
+          bots: ['img/Set3Bot1.png','img/Set3Bot2.png','img/Set3Bot3.png','img/Set3Bot4.png']
+        },
+        { setId: 'Set4',
+          tops: ['img/Set4Top1.png','img/Set4Top2.png','img/Set4Top3.png','img/Set4Top4.png'],
+          bots: ['img/Set4Bot1.png','img/Set4Bot2.png','img/Set4Bot3.png','img/Set4Bot4.png']
         }
-      };
+      ];
+      const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
 
-      const encodingFeedback = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: () => {
-          const last = jsPsych.data.get().last(1).values()[0];
-          const selectionMap = last.participantMapping;
-          const groundTruth = last.derivedGroundTruth;
+      /* ===========================
+         Storage for ground truths
+         =========================== */
+      const GroundTruthBySet = {};
 
-          const topRow = set.tops.map(src => {
-            const chosenBottom = selectionMap[src];
-            const isCorrect = groundTruth[src] === chosenBottom;
-            const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-            const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-            return `
-              <div class="top-card ${cls}">
-                ${badge}
+      /* ===========================
+         Derive ground-truth from encoding
+         =========================== */
+      function deriveGroundTruth(topIds, bottomIds, selectionMap) {
+        const topsShuffled = shuffle([...topIds]);
+        const correctTops = topsShuffled.slice(0, 2);
+        const incorrectTops = topsShuffled.slice(2);
+
+        const truth = {};
+        // correct: use participant selection
+        correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
+
+        // incorrect: assign a different bottom (avoid duplicates; fallback if needed)
+        incorrectTops.forEach(tid => {
+          const chosen = selectionMap[tid];
+          const remaining = bottomIds.filter(b => b !== chosen && !Object.values(truth).includes(b));
+          const pool = remaining.length > 0 ? remaining : bottomIds.filter(b => b !== chosen);
+          truth[tid] = jsPsych.randomization.sampleWithoutReplacement(pool, 1)[0];
+        });
+
+        return { groundTruth: truth, correctTops };
+      }
+
+      /* ===========================
+         Encoding trial (drag → slots)
+         =========================== */
+      function MatchingEncodingTrial(set) {
+        const topIds = set.tops;
+        const bottomIds = set.bots;
+
+        const encoding = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: () => {
+            const topPool = topIds.map(src => `
+              <div class="top-card" draggable="true" data-top="${src}">
                 <img src="${src}" alt="">
               </div>
-            `;
-          }).join('');
+            `).join('');
 
-          const bottoms = set.bots.map(src => `
-            <div class="img-cell"><img src="${src}" alt=""></div>
-          `).join('');
+            const slots = bottomIds.map((_, i) => `
+              <div class="drop-slot" data-slot-index="${i}">Drop here</div>
+            `).join('');
 
-          return `
-            <div>
-              <h3 class="row-title">Feedback — ${set.setId}</h3>
-              <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-              <div id="top-pool">${topRow}</div>
-              <div class="grid" id="bottom-row">${bottoms}</div>
-            </div>
-          `;
-        },
-        choices: ['OK'],
-        data: { setId: set.setId, phase: 'encoding_feedback' }
-      };
+            const bottoms = bottomIds.map(src => `
+              <div class="img-cell"><img src="${src}" alt=""></div>
+            `).join('');
 
-      const ratings = set.tops.map(src => ({
-        type: jsPsychHtmlSliderResponse,
-        stimulus: `
-          <div style="text-align:center">
-            <img src="${src}" alt="">
-          </div>
-          <p style="text-align:center;margin-top:12px">
-            How confident are you that you will be able to remember the correct match for this image on a future memory test?
-          </p>
-        `,
-        labels: ['0', '100'],
-        min: 0, max: 100, step: 1,
-        slider_start: 50,
-        require_movement: false,
-        prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
-        button_label: 'Continue',
-        data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
-      }));
-
-      const readyNext = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-          <div>
-            <p>We are now going to repeat the same process with a new set of stimuli.</p>
-            <p>Once again, you will drag the image from the top row to the stimulus you think it matches.</p>
-            <p>You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
-            <p style="margin-top:16px; text-align:center">Are you ready to begin?</p>
-          </div>
-        `,
-        choices: ['OK'],
-        data: { setId: set.setId, phase: 'encoding_ready_next' }
-      };
-
-      return [encoding, encodingFeedback, ...ratings, readyNext];
-    }
-
-    /* ===========================
-       Retrieval (shuffle; OK → feedback)
-       =========================== */
-    function MatchingRetrievalTrial(set) {
-      const groundTruth = GroundTruthBySet[set.setId];
-      const shuffledTops = shuffle([...set.tops]);
-      const shuffledBots = shuffle([...set.bots]);
-
-      const retrieval = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: () => {
-          const topPool = shuffledTops.map(src => `
-            <div class="top-card" draggable="true" data-top="${src}">
-              <img src="${src}" alt="">
-            </div>
-          `).join('');
-
-          const slots = shuffledBots.map((_, i) => `
-            <div class="drop-slot" data-slot-index="${i}">Drop here</div>
-          `).join('');
-
-          const bottoms = shuffledBots.map(src => `
-            <div class="img-cell"><img src="${src}" alt=""></div>
-          `).join('');
-
-          return `
-            <div>
-              <h3 class="row-title">Retrieval — ${set.setId}</h3>
-              <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-              <div id="top-pool">${topPool}</div>
-              <div class="grid" id="drop-row">${slots}</div>
-              <div class="grid" id="bottom-row">${bottoms}</div>
-              <div class="ok-wrap"><button id="ok-retr" disabled>OK</button></div>
-            </div>
-          `;
-        },
-        choices: [],
-        response_ends_trial: false,
-        on_load: () => {
-          const topCards = Array.from(document.querySelectorAll('.top-card'));
-          const slots = Array.from(document.querySelectorAll('.drop-slot'));
-          const okBtn = document.getElementById('ok-retr');
-
-          const slotToTop = new Array(slots.length).fill(null);
-          const selectionMap = {}; // top -> bottom
-
-          function updateOK() { okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length; }
-
-          topCards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-              e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
-            });
-          });
-
-          slots.forEach((slotEl, slotIndex) => {
-            slotEl.addEventListener('dragover', (e) => e.preventDefault());
-            slotEl.addEventListener('drop', (e) => {
-              e.preventDefault();
-              const topId = e.dataTransfer.getData('text/topId');
-              if (!topId) return;
-
-              const prevSlotIndex = slotToTop.findIndex(t => t === topId);
-              if (prevSlotIndex >= 0) {
-                slotToTop[prevSlotIndex] = null;
-                const prevSlot = slots[prevSlotIndex];
-                prevSlot.classList.remove('filled');
-                prevSlot.textContent = 'Drop here';
-              }
-
-              if (slotToTop[slotIndex] !== null) {
-                slotToTop[slotIndex] = null;
-              }
-
-              slotToTop[slotIndex] = topId;
-              slotEl.classList.add('filled');
-              slotEl.textContent = 'Placed';
-              const bottomId = shuffledBots[slotIndex];
-              selectionMap[topId] = bottomId;
-
-              updateOK();
-            });
-          });
-
-          okBtn.addEventListener('click', () => {
-            if (slotToTop.filter(x => x !== null).length !== slots.length) return;
-
-            const perItem = shuffledTops.map(topId => {
-              const chosenBottom = selectionMap[topId] || null;
-              const trueBottom = groundTruth[topId] || null;
-              const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
-              return { topId, chosenBottom, trueBottom, accurate };
-            });
-            const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
-
-            jsPsych.finishTrial({
-              setId: set.setId,
-              phase: 'retrieval',
-              participantMapping: selectionMap,
-              groundTruthUsed: groundTruth,
-              perItem,
-              totalCorrect
-            });
-          });
-        }
-      };
-
-      const retrievalFeedback = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: () => {
-          const last = jsPsych.data.get().last(1).values()[0];
-          const perItem = last.perItem;
-
-          const markedTops = perItem.map(row => {
-            const isCorrect = row.accurate === 1;
-            const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-            const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
             return `
-              <div class="top-card ${cls}">
-                ${badge}
-                <img src="${row.topId}" alt="">
+              <div>
+                <h3 class="row-title">Match Encoding — ${set.setId}</h3>
+                <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
+                <div id="top-pool">${topPool}</div>
+                <div class="grid" id="drop-row">${slots}</div>
+                <div class="grid" id="bottom-row">${bottoms}</div>
+                <div class="ok-wrap"><button id="ok-encode" disabled>OK</button></div>
               </div>
             `;
-          }).join('');
+          },
+          choices: [],
+          response_ends_trial: false,
+          on_load: () => {
+            const topCards = Array.from(document.querySelectorAll('.top-card'));
+            const slots = Array.from(document.querySelectorAll('.drop-slot'));
+            const okBtn = document.getElementById('ok-encode');
 
-          const bottoms = set.bots.map(src => `
-            <div class="img-cell"><img src="${src}" alt=""></div>
-          `).join('');
+            const slotToTop = new Array(slots.length).fill(null);
+            const selectionMap = {}; // top -> bottom
 
-          return `
-            <div>
-              <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
-              <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-              <div id="top-pool">${markedTops}</div>
-              <div class="grid">${bottoms}</div>
+            function updateOK() {
+              okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length;
+            }
+
+            topCards.forEach(card => {
+              card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
+              });
+            });
+
+            slots.forEach((slotEl, slotIndex) => {
+              slotEl.addEventListener('dragover', (e) => e.preventDefault());
+              slotEl.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const topId = e.dataTransfer.getData('text/topId');
+                if (!topId) return;
+
+                const prevSlotIndex = slotToTop.findIndex(t => t === topId);
+                if (prevSlotIndex >= 0) {
+                  slotToTop[prevSlotIndex] = null;
+                  const prevSlot = slots[prevSlotIndex];
+                  prevSlot.classList.remove('filled');
+                  prevSlot.textContent = 'Drop here';
+                }
+
+                if (slotToTop[slotIndex] !== null) {
+                  slotToTop[slotIndex] = null;
+                }
+
+                slotToTop[slotIndex] = topId;
+                slotEl.classList.add('filled');
+                slotEl.textContent = 'Placed';
+
+                const bottomId = bottomIds[slotIndex];
+                selectionMap[topId] = bottomId;
+
+                updateOK();
+              });
+            });
+
+            okBtn.addEventListener('click', () => {
+              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+
+              const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+              GroundTruthBySet[set.setId] = groundTruth;
+
+              jsPsych.finishTrial({
+                setId: set.setId,
+                phase: 'encoding',
+                participantMapping: selectionMap,
+                assignedCorrectTopIds: correctTops,
+                derivedGroundTruth: groundTruth
+              });
+            });
+          }
+        };
+
+        const encodingFeedback = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: () => {
+            const last = jsPsych.data.get().last(1).values()[0];
+            const selectionMap = last.participantMapping;
+            const groundTruth = last.derivedGroundTruth;
+
+            const topRow = set.tops.map(src => {
+              const chosenBottom = selectionMap[src];
+              const isCorrect = groundTruth[src] === chosenBottom;
+              const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+              const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+              return `
+                <div class="top-card ${cls}">
+                  ${badge}
+                  <img src="${src}" alt="">
+                </div>
+              `;
+            }).join('');
+
+            const bottoms = set.bots.map(src => `
+              <div class="img-cell"><img src="${src}" alt=""></div>
+            `).join('');
+
+            return `
+              <div>
+                <h3 class="row-title">Feedback — ${set.setId}</h3>
+                <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+                <div id="top-pool">${topRow}</div>
+                <div class="grid" id="bottom-row">${bottoms}</div>
+              </div>
+            `;
+          },
+          choices: ['OK'],
+          data: { setId: set.setId, phase: 'encoding_feedback' }
+        };
+
+        const ratings = set.tops.map(src => ({
+          type: jsPsychHtmlSliderResponse,
+          stimulus: `
+            <div style="text-align:center">
+              <img src="${src}" alt="">
             </div>
-          `;
-        },
-        choices: ['OK'],
-        data: { setId: set.setId, phase: 'retrieval_feedback' }
+            <p style="text-align:center;margin-top:12px">
+              How confident are you that you will be able to remember the correct match for this image on a future memory test?
+            </p>
+          `,
+          labels: ['0', '100'],
+          min: 0, max: 100, step: 1,
+          slider_start: 50,
+          require_movement: false,
+          prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
+          button_label: 'Continue',
+          data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
+        }));
+
+        const readyNext = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: `
+            <div>
+              <p>We are now going to repeat the same process with a new set of stimuli.</p>
+              <p>Once again, you will drag the image from the top row to the stimulus you think it matches.</p>
+              <p>You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
+              <p style="margin-top:16px; text-align:center">Are you ready to begin?</p>
+            </div>
+          `,
+          choices: ['OK'],
+          data: { setId: set.setId, phase: 'encoding_ready_next' }
+        };
+
+        return [encoding, encodingFeedback, ...ratings, readyNext];
+      }
+
+      /* ===========================
+         Retrieval (shuffle; OK → feedback)
+         =========================== */
+      function MatchingRetrievalTrial(set) {
+        const groundTruth = GroundTruthBySet[set.setId];
+        const shuffledTops = shuffle([...set.tops]);
+        const shuffledBots = shuffle([...set.bots]);
+
+        const retrieval = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: () => {
+            const topPool = shuffledTops.map(src => `
+              <div class="top-card" draggable="true" data-top="${src}">
+                <img src="${src}" alt="">
+              </div>
+            `).join('');
+
+            const slots = shuffledBots.map((_, i) => `
+              <div class="drop-slot" data-slot-index="${i}">Drop here</div>
+            `).join('');
+
+            const bottoms = shuffledBots.map(src => `
+              <div class="img-cell"><img src="${src}" alt=""></div>
+            `).join('');
+
+            return `
+              <div>
+                <h3 class="row-title">Retrieval — ${set.setId}</h3>
+                <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
+                <div id="top-pool">${topPool}</div>
+                <div class="grid" id="drop-row">${slots}</div>
+                <div class="grid" id="bottom-row">${bottoms}</div>
+                <div class="ok-wrap"><button id="ok-retr" disabled>OK</button></div>
+              </div>
+            `;
+          },
+          choices: [],
+          response_ends_trial: false,
+          on_load: () => {
+            const topCards = Array.from(document.querySelectorAll('.top-card'));
+            const slots = Array.from(document.querySelectorAll('.drop-slot'));
+            const okBtn = document.getElementById('ok-retr');
+
+            const slotToTop = new Array(slots.length).fill(null);
+            const selectionMap = {}; // top -> bottom
+
+            function updateOK() { okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length; }
+
+            topCards.forEach(card => {
+              card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
+              });
+            });
+
+            slots.forEach((slotEl, slotIndex) => {
+              slotEl.addEventListener('dragover', (e) => e.preventDefault());
+              slotEl.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const topId = e.dataTransfer.getData('text/topId');
+                if (!topId) return;
+
+                const prevSlotIndex = slotToTop.findIndex(t => t === topId);
+                if (prevSlotIndex >= 0) {
+                  slotToTop[prevSlotIndex] = null;
+                  const prevSlot = slots[prevSlotIndex];
+                  prevSlot.classList.remove('filled');
+                  prevSlot.textContent = 'Drop here';
+                }
+
+                if (slotToTop[slotIndex] !== null) {
+                  slotToTop[slotIndex] = null;
+                }
+
+                slotToTop[slotIndex] = topId;
+                slotEl.classList.add('filled');
+                slotEl.textContent = 'Placed';
+                const bottomId = shuffledBots[slotIndex];
+                selectionMap[topId] = bottomId;
+
+                updateOK();
+              });
+            });
+
+            okBtn.addEventListener('click', () => {
+              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+
+              const perItem = shuffledTops.map(topId => {
+                const chosenBottom = selectionMap[topId] || null;
+                const trueBottom = groundTruth[topId] || null;
+                const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+                return { topId, chosenBottom, trueBottom, accurate };
+              });
+              const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
+
+              jsPsych.finishTrial({
+                setId: set.setId,
+                phase: 'retrieval',
+                participantMapping: selectionMap,
+                groundTruthUsed: groundTruth,
+                perItem,
+                totalCorrect
+              });
+            });
+          }
+        };
+
+        const retrievalFeedback = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: () => {
+            const last = jsPsych.data.get().last(1).values()[0];
+            const perItem = last.perItem;
+
+            const markedTops = perItem.map(row => {
+              const isCorrect = row.accurate === 1;
+              const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+              const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+              return `
+                <div class="top-card ${cls}">
+                  ${badge}
+                  <img src="${row.topId}" alt="">
+                </div>
+              `;
+            }).join('');
+
+            const bottoms = set.bots.map(src => `
+              <div class="img-cell"><img src="${src}" alt=""></div>
+            `).join('');
+
+            return `
+              <div>
+                <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
+                <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+                <div id="top-pool">${markedTops}</div>
+                <div class="grid">${bottoms}</div>
+              </div>
+            `;
+          },
+          choices: ['OK'],
+          data: { setId: set.setId, phase: 'retrieval_feedback' }
+        };
+
+        return [retrieval, retrievalFeedback];
+      }
+
+      /* ===========================
+         Filler (2:00 gate)
+         =========================== */
+      function FillerWritingTask(promptText, tag) {
+        return {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: `
+            <div>
+              <h3 class="row-title">Writing Task</h3>
+              <p style="text-align:center; max-width:900px; margin: 0 auto 10px;">${promptText}</p>
+              <div style="display:flex; justify-content:center;">
+                <textarea id="filler-text" rows="10" style="width:100%; max-width:900px;"></textarea>
+              </div>
+              <p class="hint">You can type immediately, but the Submit button will unlock after <span class="timer" id="timer">02:00</span>.</p>
+              <div class="ok-wrap"><button id="submit-filler" disabled>Submit</button></div>
+            </div>
+          `,
+          choices: [],
+          response_ends_trial: false,
+          on_load: () => {
+            const btn = document.getElementById('submit-filler');
+            const timerEl = document.getElementById('timer');
+            const textarea = document.getElementById('filler-text');
+
+            let remaining = 120;
+            timerEl.textContent = formatMMSS(remaining);
+            const intId = setInterval(() => {
+              remaining -= 1;
+              timerEl.textContent = formatMMSS(remaining);
+              if (remaining <= 0) {
+                clearInterval(intId);
+                btn.disabled = false;
+                timerEl.textContent = '00:00';
+              }
+            }, 1000);
+
+            btn.addEventListener('click', () => {
+              jsPsych.finishTrial({ phase: 'filler', fillerTag: tag, text: textarea.value });
+            });
+
+            function formatMMSS(sec) {
+              const m = Math.floor(sec / 60); const s = sec % 60;
+              return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }
+          }
+        };
+      }
+
+      /* ===========================
+         Instructions & Ready prompt
+         =========================== */
+      const welcomeInstructions = {
+        type: jsPsychInstructions,
+        pages: [
+          `<div style="max-width:900px;margin:0 auto;text-align:left">
+            <h2>Instructions</h2>
+            <p>In this task you will see a row of stimuli at the top of the screen. Your job is to correctly pair these items with items at the bottom of the screen. You can do this by dragging that item to the square above the item you think it is matched with.</p>
+            <p>After you have matched all of the stimuli you will receive feedback about which items you matched correctly and which ones you did not. You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
+          </div>`
+        ],
+        show_clickable_nav: true,
+        button_label_next: 'Continue'
       };
 
-      return [retrieval, retrievalFeedback];
-    }
-
-    /* ===========================
-       Filler (2:00 gate)
-       =========================== */
-    function FillerWritingTask(promptText, tag) {
-      return {
-        type: jsPsychHtmlButtonResponse,
+      const readyToBegin = {
+        type: jsPsychHtmlKeyboardResponse,
         stimulus: `
-          <div>
-            <h3 class="row-title">Writing Task</h3>
-            <p style="text-align:center; max-width:900px; margin: 0 auto 10px;">${promptText}</p>
-            <div style="display:flex; justify-content:center;">
-              <textarea id="filler-text" rows="10" style="width:100%; max-width:900px;"></textarea>
-            </div>
-            <p class="hint">You can type immediately, but the Submit button will unlock after <span class="timer" id="timer">02:00</span>.</p>
-            <div class="ok-wrap"><button id="submit-filler" disabled>Submit</button></div>
+          <div style="text-align:center">
+            <p>Are you ready to begin?</p>
+            <p><strong>Press the space bar</strong> to start the first trial.</p>
           </div>
         `,
-        choices: [],
-        response_ends_trial: false,
-        on_load: () => {
-          const btn = document.getElementById('submit-filler');
-          const timerEl = document.getElementById('timer');
-          const textarea = document.getElementById('filler-text');
-
-          let remaining = 120;
-          timerEl.textContent = formatMMSS(remaining);
-          const intId = setInterval(() => {
-            remaining -= 1;
-            timerEl.textContent = formatMMSS(remaining);
-            if (remaining <= 0) {
-              clearInterval(intId);
-              btn.disabled = false;
-              timerEl.textContent = '00:00';
-            }
-          }, 1000);
-
-          btn.addEventListener('click', () => {
-            jsPsych.finishTrial({ phase: 'filler', fillerTag: tag, text: textarea.value });
-          });
-
-          function formatMMSS(sec) {
-            const m = Math.floor(sec / 60); const s = sec % 60;
-            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-          }
-        }
+        choices: [' '],
+        data: { phase: 'ready_to_begin' }
       };
-    }
 
-    /* ===========================
-       Instructions & Ready prompt
-       =========================== */
-    const welcomeInstructions = {
-      type: jsPsychInstructions,
-      pages: [
-        `<div style="max-width:900px;margin:0 auto;text-align:left">
-          <h2>Instructions</h2>
-          <p>In this task you will see a row of stimuli at the top of the screen. Your job is to correctly pair these items with items at the bottom of the screen. You can do this by dragging that item to the square above the item you think it is matched with.</p>
-          <p>After you have matched all of the stimuli you will receive feedback about which items you matched correctly and which ones you did not. You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
-        </div>`
-      ],
-      show_clickable_nav: true,
-      button_label_next: 'Continue'
-    };
+      /* ===========================
+         Timeline
+         =========================== */
+      const timeline = [];
 
-    const readyToBegin = {
-      type: jsPsychHtmlKeyboardResponse,
-      stimulus: `
-        <div style="text-align:center">
-          <p>Are you ready to begin?</p>
-          <p><strong>Press the space bar</strong> to start the first trial.</p>
-        </div>
-      `,
-      choices: [' '],
-      data: { phase: 'ready_to_begin' }
-    };
+      // Preload
+      timeline.push({
+        type: jsPsychPreload,
+        images: preload_images,
+        message: 'Loading images, please wait...',
+        error_message: 'Some images failed to load. Please check filenames and paths.'
+      });
 
-    /* ===========================
-       Timeline
-       =========================== */
-    const timeline = [];
+      // Welcome & start
+      timeline.push(welcomeInstructions);
+      timeline.push(readyToBegin);
 
-    // Preload
-    timeline.push({
-      type: jsPsychPreload,
-      images: preload_images,
-      message: 'Loading images, please wait...',
-      error_message: 'Some images failed to load. Please check filenames and paths.'
+      // Counterbalance set order within each half
+      const half1 = shuffle([SETS[0], SETS[1]]);
+      const half2 = shuffle([SETS[2], SETS[3]]);
+
+      // Half 1
+      timeline.push(...MatchingEncodingTrial(half1[0]));
+      timeline.push(...MatchingEncodingTrial(half1[1]));
+      timeline.push(FillerWritingTask(
+        'Please write about your favorite teacher and why that person is your favorite teacher. (You may submit after 2 minutes.)',
+        'favorite_teacher'
+      ));
+      timeline.push(...MatchingRetrievalTrial(half1[0]));
+      timeline.push(...MatchingRetrievalTrial(half1[1]));
+
+      // Half 2
+      timeline.push(...MatchingEncodingTrial(half2[0]));
+      timeline.push(...MatchingEncodingTrial(half2[1]));
+      timeline.push(FillerWritingTask(
+        'Please write about your favorite music and why it is your favorite. (You may submit after 2 minutes.)',
+        'favorite_music'
+      ));
+      timeline.push(...MatchingRetrievalTrial(half2[0]));
+      timeline.push(...MatchingRetrievalTrial(half2[1]));
+
+      // End
+      const prolificPID = getQueryParam('PROLIFIC_PID');
+      const studyID = getQueryParam('STUDY_ID');
+      const sessionID = getQueryParam('SESSION_ID');
+
+      const endScreen = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div style="max-width:800px;margin:0 auto;text-align:left">
+            <h3>Thank you for your participation!</h3>
+            <p>Your responses have been recorded.</p>
+            <p><em>For local testing only:</em> you can download your data below.</p>
+          </div>
+        `,
+        choices: ['Download data (test only)', 'Finish'],
+        on_finish: (data) => {
+          if (data.response === 0) {
+            jsPsych.data.get().localSave('csv', 'lff_matching_data.csv');
+          }
+        },
+        data: { phase: 'end' }
+      };
+      timeline.push(endScreen);
+
+      // Global data props
+      jsPsych.data.addProperties({
+        prolific_pid: prolificPID,
+        prolific_study_id: studyID,
+        prolific_session_id: sessionID,
+        timestamp_start: new Date().toISOString()
+      });
+
+      // Run
+      jsPsych.run(timeline);
+
+      /* ===========================
+         Qualtrics integration (keep commented unless embedding)
+         -----------------------------------------------------------------
+
+      // function qualtricsSaveAndAdvance() {
+      //   const allDataJSON = jsPsych.data.get().json();
+      //   const MAX_FIELD_CHARS = 18000; // conservative
+      //   const FIELD_PREFIX = 'jspsych_chunk_';
+      //
+      //   const chunks = [];
+      //   for (let i = 0; i < allDataJSON.length; i += MAX_FIELD_CHARS) {
+      //     chunks.push(allDataJSON.substring(i, i + MAX_FIELD_CHARS));
+      //   }
+      //
+      //   try {
+      //     if (window.Qualtrics && window.Qualtrics.SurveyEngine) {
+      //       Qualtrics.SurveyEngine.setEmbeddedData('jspsych_chunk_count', String(chunks.length));
+      //       chunks.forEach((c, idx) => {
+      //         Qualtrics.SurveyEngine.setEmbeddedData(FIELD_PREFIX + (idx + 1), c);
+      //       });
+      //     }
+      //   } catch (e) {
+      //     console.error('Qualtrics embedded data write failed:', e);
+      //   }
+      //
+      //   // if (window.Qualtrics && window.Qualtrics.SurveyEngine) {
+      //   //   Qualtrics.SurveyEngine.navClick('NextButton');
+      //   // }
+      // }
+      //
+      // jsPsych.onFinish = qualtricsSaveAndAdvance;
+
+      */
     });
-
-    // Welcome & start
-    timeline.push(welcomeInstructions);
-    timeline.push(readyToBegin);
-
-    // Counterbalance set order within each half
-    const half1 = shuffle([SETS[0], SETS[1]]);
-    const half2 = shuffle([SETS[2], SETS[3]]);
-
-    // Half 1
-    timeline.push(...MatchingEncodingTrial(half1[0]));
-    timeline.push(...MatchingEncodingTrial(half1[1]));
-    timeline.push(FillerWritingTask(
-      'Please write about your favorite teacher and why that person is your favorite teacher. (You may submit after 2 minutes.)',
-      'favorite_teacher'
-    ));
-    timeline.push(...MatchingRetrievalTrial(half1[0]));
-    timeline.push(...MatchingRetrievalTrial(half1[1]));
-
-    // Half 2
-    timeline.push(...MatchingEncodingTrial(half2[0]));
-    timeline.push(...MatchingEncodingTrial(half2[1]));
-    timeline.push(FillerWritingTask(
-      'Please write about your favorite music and why it is your favorite. (You may submit after 2 minutes.)',
-t endScreen = {
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `
-        <div style="max-width:800px;margin:0 auto;text-align:left">
-          <h3>Thank you for your participation!</h3>
-          <p>Your responses have been recorded.</p>
-          <p><em>For local testing only:</em> you can download your data below.</p>
-        </div>
-      `,
-      choices: ['Download data (test only)', 'Finish'],
-      on_finish: (data) => {
-        if (data.response === 0) {
-          jsPsych.data.get().localSave('csv', 'lff_matching_data.csv');
-        }
-      },
-      data: { phase: 'end' }
-    };
-    timeline.push(endScreen);
-
-    // Global data props
-    jsPsych.data.addProperties({
-      prolific_pid: prolificPID,
-      prolific_study_id: studyID,
-      prolific_session_id: sessionID,
-      timestamp_start: new Date().toISOString()
-    });
-
-    // Run the experiment
-    jsPsych.run(timeline);
-
-    /* ===========================
-       Qualtrics integration (enable when embedding)
-       -----------------------------------------------------------------
-
-    // function qualtricsSaveAndAdvance() {
-    //   const allDataJSON = jsPsych.data.get().json();
-    //   const MAX_FIELD_CHARS = 18000; // conservative
-    //   const FIELD_PREFIX = 'jspsych_chunk_';
-    //
-    //   const chunks = [];
-    //   for (let i = 0; i < allDataJSON.length; i += MAX_FIELD_CHARS) {
-    //     chunks.push(allDataJSON.substring(i, i + MAX_FIELD_CHARS));
-    //   }
-    //
-    //   try {
-    //     if (window.Qualtrics && window.Qualtrics.SurveyEngine) {
-    //       Qualtrics.SurveyEngine.setEmbeddedData('jspsych_chunk_count', String(chunks.length));
-    //       chunks.forEach((c, idx) => {
-    //         Qualtrics.SurveyEngine.setEmbeddedData(FIELD_PREFIX + (idx + 1), c);
-    //       });
-    //     }
-    //   } catch (e) {
-    //     console.error('Qualtrics embedded data write failed:', e);
-    //   }
-    //
-    //   // if (window.Qualtrics && window.Qualtrics.SurveyEngine) {
-    //   //   Qualtrics.SurveyEngine.navClick('NextButton');
-    //   // }
-    // }
-    //
-    // jsPsych.onFinish = qualtricsSaveAndAdvance; // enable when embedding
-
-    */
   </script>
 </body>
 </html>
