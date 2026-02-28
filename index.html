@@ -6,18 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- jsPsych core (CDN): stylesheet + browser-global script -->
-  https://unpkg.com/jspsych@7.3.4/css/jspsych.css
-  https://unpkg.com/jspsych@7.3.4</script>
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
 
   <!-- jsPsych plugins (CDN): browser-global builds -->
-  https://unpkg.com/@jspsych/plugin-preload@1.1.3</script>
-  https://unpkg.com/@jspsych/plugin-instructions@1.1.3</script>
-  https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3</script>
-  https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0</script>
-  https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3</script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
 
-  <!-- Optional: stop favicon 404 noise -->
-  data:,
+  <!-- (optional) suppress favicon 404 noise -->
+  <link rel="icon" href="data:,">
 
   <style>
     :root {
@@ -45,7 +45,6 @@
       max-width: calc(4 * var(--cell-w) + 3 * var(--gap));
     }
 
-    /* Centered top pool */
     #top-pool {
       display: flex; justify-content: center; align-items: center;
       gap: var(--gap); flex-wrap: wrap; margin: 0 auto 6px;
@@ -87,7 +86,6 @@
     button { padding: 10px 16px; font-size: 16px; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Feedback markers */
     .badge {
       position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff;
@@ -114,8 +112,7 @@ function getQueryParam(name) {
 function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
 
 /* ===========================
-   Config: Define sets & image paths (PNG)
-   - Make sure these files exist in your repo under /img/
+   Config: image sets (32 PNGs total in /img/)
    =========================== */
 const SETS = [
   { setId: 'Set1',
@@ -139,15 +136,15 @@ const SETS = [
 const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
 
 /* ===========================
-   Storage for ground truths created at encoding
+   Storage for ground truths built during encoding
    { setId: { topPath -> bottomPath } }
    =========================== */
 const GroundTruthBySet = {};
 
 /* ===========================
-   Derive ground-truth from encoding
-   - pick exactly 2 tops as correct (use participant's choice)
-   - reassign the other 2 to a different bottom
+   Build ground-truth from encoding:
+   - exactly 2 correct (participant’s choice)
+   - 2 reassigned to a different bottom
    =========================== */
 function deriveGroundTruth(topIds, bottomIds, selectionMap) {
   const topsShuffled = shuffle([...topIds]);
@@ -155,10 +152,8 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap) {
   const incorrectTops = topsShuffled.slice(2);
 
   const truth = {};
-  // Keep participant's choice for the two marked correct
   correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
 
-  // For the remaining two, force a different bottom
   incorrectTops.forEach(tid => {
     const chosen = selectionMap[tid];
     const remaining = bottomIds.filter(b => b !== chosen && !Object.values(truth).includes(b));
@@ -170,7 +165,7 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap) {
 }
 
 /* ===========================
-   Encoding UI (drag tops -> 4 slots above bottom row)
+   Encoding trial
    =========================== */
 function MatchingEncodingTrial(set) {
   const topIds = set.tops;
@@ -181,7 +176,7 @@ function MatchingEncodingTrial(set) {
     stimulus: () => {
       const topPool = topIds.map(src => `
         <div class="top-card" draggable="true" data-top="${src}">
-          <img src="${src}" alt="${src}">
+          ${src}
         </div>
       `).join('');
 
@@ -190,7 +185,7 @@ function MatchingEncodingTrial(set) {
       `).join('');
 
       const bottoms = bottomIds.map(src => `
-        <div class="img-cell"><img src="${src}" alt="${src}"></div>
+        <div class="img-cell">${src}</div>
       `).join('');
 
       return `
@@ -231,7 +226,6 @@ function MatchingEncodingTrial(set) {
           const topId = e.dataTransfer.getData('text/topId');
           if (!topId) return;
 
-          // If that top was placed already, free its previous slot
           const prevSlotIndex = slotToTop.findIndex(t => t === topId);
           if (prevSlotIndex >= 0) {
             slotToTop[prevSlotIndex] = null;
@@ -240,12 +234,10 @@ function MatchingEncodingTrial(set) {
             prevSlot.textContent = 'Drop here';
           }
 
-          // Overwrite any occupant in this slot
           if (slotToTop[slotIndex] !== null) {
             slotToTop[slotIndex] = null;
           }
 
-          // Assign
           slotToTop[slotIndex] = topId;
           slotEl.classList.add('filled');
           slotEl.textContent = 'Placed';
@@ -274,7 +266,7 @@ function MatchingEncodingTrial(set) {
     }
   };
 
-  // Encoding feedback (✓ / ✗)
+  // Encoding feedback
   const encodingFeedback = {
     type: jsPsychHtmlButtonResponse,
     stimulus: () => {
@@ -290,13 +282,13 @@ function MatchingEncodingTrial(set) {
         return `
           <div class="top-card ${cls}">
             ${badge}
-            <img src="${src}" alt="${src}">
+            ${src}
           </div>
         `;
       }).join('');
 
       const bottoms = set.bots.map(src => `
-        <div class="img-cell"><img src="${src}" alt="${src}"></div>
+        <div class="img-cell">${src}</div>
       `).join('');
 
       return `
@@ -312,12 +304,12 @@ function MatchingEncodingTrial(set) {
     data: { setId: set.setId, phase: 'encoding_feedback' }
   };
 
-  // Confidence ratings for each top image
+  // Confidence ratings
   const ratings = set.tops.map(src => ({
     type: jsPsychHtmlSliderResponse,
     stimulus: `
       <div style="text-align:center">
-        <img src="${src}" alt="${src}" style="max-width: 320px; max-height: 260px; object-fit: contain;" />
+        ${src}
       </div>
       <p style="text-align:center;margin-top:12px">
         How confident are you that you will be able to remember the correct match for this image on a future memory test?
@@ -330,7 +322,6 @@ function MatchingEncodingTrial(set) {
     data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
   }));
 
-  // Between-set message
   const readyNext = {
     type: jsPsychHtmlButtonResponse,
     stimulus: `
@@ -349,7 +340,7 @@ function MatchingEncodingTrial(set) {
 }
 
 /* ===========================
-   Retrieval (shuffle both rows; OK → feedback)
+   Retrieval trial (OK → feedback)
    =========================== */
 function MatchingRetrievalTrial(set) {
   const groundTruth = GroundTruthBySet[set.setId];
@@ -361,7 +352,7 @@ function MatchingRetrievalTrial(set) {
     stimulus: () => {
       const topPool = shuffledTops.map(src => `
         <div class="top-card" draggable="true" data-top="${src}">
-          <img src="${src}" alt="${src}">
+          ${src}
         </div>
       `).join('');
 
@@ -370,7 +361,7 @@ function MatchingRetrievalTrial(set) {
       `).join('');
 
       const bottoms = shuffledBots.map(src => `
-        <div class="img-cell"><img src="${src}" alt="${src}"></div>
+        <div class="img-cell">${src}</div>
       `).join('');
 
       return `
@@ -467,13 +458,13 @@ function MatchingRetrievalTrial(set) {
         return `
           <div class="top-card ${cls}">
             ${badge}
-            <img src="${row.topId}" alt="${row.topId}">
+            ${row.topId}
           </div>
         `;
       }).join('');
 
       const bottoms = set.bots.map(src => `
-        <div class="img-cell"><img src="${src}" alt="${src}"></div>
+        <div class="img-cell">${src}</div>
       `).join('');
 
       return `
@@ -574,43 +565,44 @@ const readyToBegin = {
 };
 
 /* ===========================
-   Build timeline (sets counterbalanced within halves)
+   Build timeline (sets CB within halves)
    =========================== */
 const timeline = [];
 
-// Preload
 timeline.push({
   type: jsPsychPreload,
   images: preload_images,
   message: 'Loading images, please wait...',
-eline.push(...MatchingEncodingTrial(half1[1]));
+  error_message: 'Some images failed to load. Please check filenames and paths.'
+});
 
-// Filler 1
+timeline.push(welcomeInstructions);
+timeline.push(readyToBegin);
+
+const half1 = shuffle([SETS[0], SETS[1]]);
+timeline.push(...MatchingEncodingTrial(half1[0]));
+timeline.push(...MatchingEncodingTrial(half1[1]));
+
 timeline.push(FillerWritingTask(
   'Please write about your favorite teacher and why that person is your favorite teacher. (You may submit after 2 minutes.)',
   'favorite_teacher'
 ));
 
-// Retrieval (Half 1)
 timeline.push(...MatchingRetrievalTrial(half1[0]));
 timeline.push(...MatchingRetrievalTrial(half1[1]));
 
-// Half 2 (Set3 + Set4, counterbalanced)
 const half2 = shuffle([SETS[2], SETS[3]]);
 timeline.push(...MatchingEncodingTrial(half2[0]));
 timeline.push(...MatchingEncodingTrial(half2[1]));
 
-// Filler 2
 timeline.push(FillerWritingTask(
   'Please write about your favorite music and why it is your favorite. (You may submit after 2 minutes.)',
   'favorite_music'
 ));
 
-// Retrieval (Half 2)
 timeline.push(...MatchingRetrievalTrial(half2[0]));
 timeline.push(...MatchingRetrievalTrial(half2[1]));
 
-// End + test download
 const prolificPID = getQueryParam('PROLIFIC_PID');
 const studyID = getQueryParam('STUDY_ID');
 const sessionID = getQueryParam('SESSION_ID');
@@ -649,7 +641,7 @@ jsPsych.data.addProperties({
 jsPsych.run(timeline);
 
 /* ===========================
-   Qualtrics integration (enable when embedding)
+   Qualtrics integration (commented)
    -----------------------------------------------------------------
 
 // function qualtricsSaveAndAdvance() {
@@ -673,13 +665,12 @@ jsPsych.run(timeline);
 //     console.error('Qualtrics embedded data write failed:', e);
 //   }
 //
-//   // Optional auto-advance:
 //   // if (window.Qualtrics && window.Qualtrics.SurveyEngine) {
 //   //   Qualtrics.SurveyEngine.navClick('NextButton');
 //   // }
 // }
 //
-// jsPsych.onFinish = qualtricsSaveAndAdvance; // enable when embedding
+// jsPsych.onFinish = qualtricsSaveAndAdvance;
 
 */
 </script>
