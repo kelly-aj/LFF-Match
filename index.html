@@ -47,7 +47,7 @@
     /* TOP POOL: fixed total width for 4 items, no wrap */
     #top-pool {
       display: flex;
-      flex-wrap: nowrap;       /* keep in one row */
+      flex-wrap: nowrap;     /* keep in one row */
       justify-content: flex-start;
       align-items: center;
       gap: var(--gap);
@@ -81,6 +81,7 @@
       cursor: grab;
       position: relative;
       user-select: none;
+      /* overflow: visible by default so badges won't clip */
     }
     .top-card:active { cursor: grabbing; }
     .top-card img {
@@ -142,8 +143,8 @@
 
     .badge {
       position: absolute;
-      top: -12px;
-      right: -12px;
+      top: 6px;           /* inside the card so it doesn't clip */
+      right: 6px;
       width: 30px;
       height: 30px;
       border-radius: 50%;
@@ -152,7 +153,6 @@
       justify-content: center;
       font-weight: 900;
       color: #fff;
-      box-shadow: 0 0 0 3px #fff;
       z-index: 2;
     }
     .badge.correct { background: var(--ok); }
@@ -161,6 +161,15 @@
     .outline-incorrect { outline: 4px solid var(--bad); outline-offset: 2px; }
 
     .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+    /* Ratings page: smaller image to avoid vertical scroll */
+    .rating-img {
+      display: block;
+      margin: 0 auto;
+      max-width: min(260px, 60vw);
+      max-height: min(180px, 35vh);
+      object-fit: contain;
+    }
   </style>
 </head>
 <body>
@@ -387,17 +396,20 @@
           data: { setId: set.setId, phase: 'encoding_feedback' }
         };
 
+        /* Removed the extra "ready to begin" screen here to avoid repeating instructions */
+
+        /* Ratings (smaller image, mid-label 50) */
         const ratings = set.tops.map(src => ({
           type: jsPsychHtmlSliderResponse,
           stimulus: `
             <div style="text-align:center">
-              <img src="${src}" alt="">
+              <img class="rating-img" src="${src}" alt="">
             </div>
             <p style="text-align:center;margin-top:12px">
               How confident are you that you will be able to remember the correct match for this image on a future memory test?
             </p>
           `,
-          labels: ['0', '100'],
+          labels: ['0', '50', '100'],
           min: 0, max: 100, step: 1,
           slider_start: 50,
           require_movement: false,
@@ -406,28 +418,25 @@
           data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
         }));
 
-        const readyNext = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: `
-            <div>
-              <p>We are now going to repeat the same process with a new set of stimuli.</p>
-              <p>Once again, you will drag the image from the top row to the stimulus you think it matches.</p>
-              <p>You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
-              <p style="margin-top:16px; text-align:center">Are you ready to begin?</p>
-            </div>
-          `,
-          choices: ['OK'],
-          data: { setId: set.setId, phase: 'encoding_ready_next' }
-        };
-
-        return [encoding, encodingFeedback, ...ratings, readyNext];
+        return [encoding, encodingFeedback, ...ratings];
       }
 
       /* ===========================
          Retrieval (shuffle; OK → feedback)
          =========================== */
       function MatchingRetrievalTrial(set) {
-        const groundTruth = GroundTruthBySet[set.setId];
+        // Ensure groundTruth exists; try memory, then data, then fallback identity mapping
+        let groundTruth = GroundTruthBySet[set.setId];
+        if (!groundTruth) {
+          const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
+          if (enc && enc.derivedGroundTruth) {
+            groundTruth = enc.derivedGroundTruth;
+            GroundTruthBySet[set.setId] = groundTruth;
+          } else {
+            groundTruth = Object.fromEntries(set.tops.map((t, i) => [t, set.bots[i]]));
+          }
+        }
+
         const shuffledTops = shuffle([...set.tops]);
         const shuffledBots = shuffle([...set.bots]);
 
