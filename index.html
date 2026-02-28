@@ -28,54 +28,138 @@
       --gap: 16px;
       --ok: #2e7d32;
       --bad: #c62828;
+      --row-min-width: calc(4 * var(--cell-w) + 3 * var(--gap));
     }
-    body { background: #fff; }
+
+    body { background: #fff; margin: 0; }
+
     .row-title { text-align: center; margin: 12px 0 6px; font-weight: 700; }
     .hint { text-align: center; color: #444; margin: 6px 0 8px; font-size: 15px; }
+
+    /* Scroll container so rows stay 4-across and scroll on small screens */
+    .row-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 10px auto;
+      max-width: 100%;
+    }
+
+    /* TOP POOL: fixed total width for 4 items, no wrap */
+    #top-pool {
+      display: flex;
+      flex-wrap: nowrap;       /* keep in one row */
+      justify-content: flex-start;
+      align-items: center;
+      gap: var(--gap);
+      min-width: var(--row-min-width);
+      margin: 0 auto;
+      padding: 0 4px;
+    }
+
+    /* DROP + BOTTOM GRIDS: fixed 4 columns */
     .grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, var(--cell-w));
       gap: var(--gap);
       align-items: start;
-      justify-items: center;
+      justify-content: center;
+      min-width: var(--row-min-width);
       margin: 10px auto;
-      max-width: calc(4 * var(--cell-w) + 3 * var(--gap));
+      padding: 0 4px;
     }
-    #top-pool {
-      display: flex; justify-content: center; align-items: center;
-      gap: var(--gap); flex-wrap: wrap; margin: 0 auto;
-      max-width: calc(4 * var(--cell-w) + 3 * var(--gap));
-    }
+
     .top-card {
-      width: var(--cell-w); min-height: var(--cell-h);
-      border: 2px solid #aaa; border-radius: 10px; background: #fff;
-      padding: 4px; display: flex; align-items: center; justify-content: center;
-      cursor: grab; position: relative; user-select: none;
+      width: var(--cell-w);
+      min-height: var(--cell-h);
+      border: 2px solid #aaa;
+      border-radius: 10px;
+      background: #fff;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      position: relative;
+      user-select: none;
     }
     .top-card:active { cursor: grabbing; }
-    .top-card img { max-width: var(--img-max-w); max-height: var(--img-max-h); object-fit: contain; pointer-events: none; display: block; }
+    .top-card img {
+      max-width: var(--img-max-w);
+      max-height: var(--img-max-h);
+      object-fit: contain;
+      pointer-events: none; /* don't intercept drag */
+      display: block;
+    }
+
     .drop-slot {
-      width: var(--cell-w); height: var(--cell-h); border: 2px dashed #999; border-radius: 10px;
-      background: #f6f6ff; display: flex; align-items: center; justify-content: center; position: relative;
-      color: #666; font-size: 15px;
+      width: var(--cell-w);
+      height: var(--cell-h);
+      border: 2px dashed #999;
+      border-radius: 10px;
+      background: #f6f6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      color: #666;
+      font-size: 15px;
+      text-align: center;
     }
-    .drop-slot.filled { border-style: solid; background: #eef7ff; color: #222; }
+    .drop-slot.filled {
+      border-style: solid;
+      background: #eef7ff;
+      color: #222;
+    }
+    .drop-slot img {
+      max-width: var(--img-max-w);
+      max-height: var(--img-max-h);
+      object-fit: contain;
+      display: block;
+    }
+
     .img-cell {
-      width: var(--cell-w); min-height: var(--cell-h); border: 1px dashed #ddd; background: #fafafa;
-      border-radius: 10px; display: flex; align-items: center; justify-content: center; position: relative; padding: 4px;
+      width: var(--cell-w);
+      min-height: var(--cell-h);
+      border: 1px dashed #ddd;
+      background: #fafafa;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 4px;
     }
-    .img-cell img { max-width: var(--img-max-w); max-height: var(--img-max-h); object-fit: contain; display: block; }
+    .img-cell img {
+      max-width: var(--img-max-w);
+      max-height: var(--img-max-h);
+      object-fit: contain;
+      display: block;
+    }
+
     .ok-wrap { margin-top: 16px; text-align: center; }
     button { padding: 10px 16px; font-size: 16px; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
+
     .badge {
-      position: absolute; top: -12px; right: -12px; width: 30px; height: 30px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; box-shadow: 0 0 0 3px #fff; z-index: 2;
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 0 0 3px #fff;
+      z-index: 2;
     }
     .badge.correct { background: var(--ok); }
     .badge.incorrect { background: var(--bad); }
     .outline-correct { outline: 4px solid var(--ok); outline-offset: 2px; }
     .outline-incorrect { outline: 4px solid var(--bad); outline-offset: 2px; }
+
     .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
   </style>
 </head>
@@ -94,7 +178,6 @@
       console.error('Global error:', e.message, e.filename, e.lineno, e.colno, e.error);
     });
 
-    // Wait until all deferred scripts (jsPsych + plugins) are parsed
     window.addEventListener('DOMContentLoaded', () => {
       /* ===========================
          Initialize jsPsych FIRST
@@ -189,9 +272,9 @@
               <div>
                 <h3 class="row-title">Match Encoding — ${set.setId}</h3>
                 <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-                <div id="top-pool">${topPool}</div>
-                <div class="grid" id="drop-row">${slots}</div>
-                <div class="grid" id="bottom-row">${bottoms}</div>
+                <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
+                <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
+                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
                 <div class="ok-wrap"><button id="ok-encode" disabled>OK</button></div>
               </div>
             `;
@@ -223,6 +306,7 @@
                 const topId = e.dataTransfer.getData('text/topId');
                 if (!topId) return;
 
+                // If this top was already in another slot, clear that slot
                 const prevSlotIndex = slotToTop.findIndex(t => t === topId);
                 if (prevSlotIndex >= 0) {
                   slotToTop[prevSlotIndex] = null;
@@ -231,14 +315,17 @@
                   prevSlot.textContent = 'Drop here';
                 }
 
+                // If this slot already had a top, clear it (we're replacing)
                 if (slotToTop[slotIndex] !== null) {
                   slotToTop[slotIndex] = null;
                 }
 
+                // Place the image in the slot
                 slotToTop[slotIndex] = topId;
                 slotEl.classList.add('filled');
-                slotEl.textContent = 'Placed';
+                slotEl.innerHTML = `<img src="${topId}" alt="">`;
 
+                // Record mapping
                 const bottomId = bottomIds[slotIndex];
                 selectionMap[topId] = bottomId;
 
@@ -291,8 +378,8 @@
               <div>
                 <h3 class="row-title">Feedback — ${set.setId}</h3>
                 <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-                <div id="top-pool">${topRow}</div>
-                <div class="grid" id="bottom-row">${bottoms}</div>
+                <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
+                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
               </div>
             `;
           },
@@ -365,9 +452,9 @@
               <div>
                 <h3 class="row-title">Retrieval — ${set.setId}</h3>
                 <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-                <div id="top-pool">${topPool}</div>
-                <div class="grid" id="drop-row">${slots}</div>
-                <div class="grid" id="bottom-row">${bottoms}</div>
+                <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
+                <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
+                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
                 <div class="ok-wrap"><button id="ok-retr" disabled>OK</button></div>
               </div>
             `;
@@ -397,6 +484,7 @@
                 const topId = e.dataTransfer.getData('text/topId');
                 if (!topId) return;
 
+                // If this top was already in another slot, clear that slot
                 const prevSlotIndex = slotToTop.findIndex(t => t === topId);
                 if (prevSlotIndex >= 0) {
                   slotToTop[prevSlotIndex] = null;
@@ -405,13 +493,17 @@
                   prevSlot.textContent = 'Drop here';
                 }
 
+                // If this slot already had a top, clear it (we're replacing)
                 if (slotToTop[slotIndex] !== null) {
                   slotToTop[slotIndex] = null;
                 }
 
+                // Place the image in the slot
                 slotToTop[slotIndex] = topId;
                 slotEl.classList.add('filled');
-                slotEl.textContent = 'Placed';
+                slotEl.innerHTML = `<img src="${topId}" alt="">`;
+
+                // Record mapping
                 const bottomId = shuffledBots[slotIndex];
                 selectionMap[topId] = bottomId;
 
@@ -468,8 +560,8 @@
               <div>
                 <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
                 <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-                <div id="top-pool">${markedTops}</div>
-                <div class="grid">${bottoms}</div>
+                <div class="row-scroll"><div id="top-pool">${markedTops}</div></div>
+                <div class="row-scroll"><div class="grid">${bottoms}</div></div>
               </div>
             `;
           },
