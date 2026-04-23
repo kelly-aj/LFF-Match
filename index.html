@@ -8,173 +8,250 @@
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
   <script src="https://unpkg.com/jspsych@7.3.4" defer></script>
 
- <script src="https://unpkg.com/jspsych@7.3.4/dist/index.browser.min.js"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3" defer></script>
 
   <link rel="icon" href="data:,">
+
+  <style>
+    :root {
+      --cell-w: 220px;
+      --cell-h: 180px;
+      --img-max-w: 200px;
+      --img-max-h: 160px;
+      --gap: 16px;
+      --ok: #2e7d32;
+      --bad: #c62828;
+      --row-min-width: calc(4 * var(--cell-w) + 3 * var(--gap));
+    }
+
+    body { background: #fff; margin: 0; }
+
+    .row-title { text-align: center; margin: 12px 0 6px; font-weight: 700; }
+    .hint { text-align: center; color: #444; margin: 6px 0 8px; font-size: 15px; }
+
+    .row-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 10px auto;
+      max-width: 100%;
+    }
+
+    #top-pool {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: var(--gap);
+      min-width: var(--row-min-width);
+      margin: 0 auto;
+      padding: 0 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, var(--cell-w));
+      gap: var(--gap);
+      justify-content: center;
+      min-width: var(--row-min-width);
+      margin: 10px auto;
+    }
+
+    .top-card, .drop-slot, .img-cell {
+      width: var(--cell-w);
+      height: var(--cell-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+    }
+
+    .top-card {
+      border: 2px solid #aaa;
+      cursor: grab;
+      background: white;
+      position: relative;
+      user-select: none;
+    }
+
+    .drop-slot {
+      border: 2px dashed #999;
+      background: #f6f6ff;
+      position: relative;
+    }
+
+    .drop-slot.filled {
+      border-style: solid;
+      background: #eef7ff;
+    }
+
+    .img-cell {
+      border: 1px dashed #ddd;
+      background: #fafafa;
+    }
+
+    img {
+      max-width: var(--img-max-w);
+      max-height: var(--img-max-h);
+      object-fit: contain;
+    }
+
+    .ok-wrap { text-align: center; margin-top: 16px; }
+    button { padding: 10px 16px; font-size: 16px; }
+
+    .badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .badge.correct { background: var(--ok); }
+    .badge.incorrect { background: var(--bad); }
+  </style>
 </head>
 
 <body>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
 
-const jsPsych = window.jsPsych.initJsPsych({ on_finish: () => {} });
-const jsPsychHtmlButtonResponse = window.jsPsychHtmlButtonResponse;
-const jsPsychHtmlKeyboardResponse = window.jsPsychHtmlKeyboardResponse;
-const jsPsychInstructions = window.jsPsychInstructions;
-const jsPsychPreload = window.jsPsychPreload;
-const jsPsychHtmlSliderResponse = window.jsPsychHtmlSliderResponse;
-function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
+  const jsPsych = initJsPsych();
 
-const SETS = [
-  { setId: 'Set1',
-    tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
-    bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+  function shuffle(a){ return jsPsych.randomization.shuffle(a); }
+
+  const SETS = [{
+    setId:'Set1',
+    tops:['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
+    bots:['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+  }];
+
+  const GroundTruthBySet = {};
+
+  function deriveGroundTruth(topIds, bottomIds, selectionMap){
+    const topsShuffled = shuffle([...topIds]);
+    const correctTops = topsShuffled.slice(0,2);
+    const incorrectTops = topsShuffled.slice(2);
+
+    const truth = {};
+
+    correctTops.forEach(t => truth[t] = selectionMap[t]);
+
+    incorrectTops.forEach(t => {
+      const chosen = selectionMap[t];
+      const pool = bottomIds.filter(b => b !== chosen);
+      truth[t] = pool[0];
+    });
+
+    return {groundTruth:truth, correctTops};
   }
-];
 
-const GroundTruthBySet = {};
+  function MatchingEncodingTrial(set){
 
-function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-  const topsShuffled = shuffle([...topIds]);
-  const correctTops = topsShuffled.slice(0, 2);
-  const incorrectTops = topsShuffled.slice(2);
+    return {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: '',
+      choices: [],
+      response_ends_trial: false,
 
-  const truth = {};
-  correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
+      on_load: () => {
 
-  incorrectTops.forEach(tid => {
-    const chosen = selectionMap[tid];
-    const pool = bottomIds.filter(b => b !== chosen);
-    truth[tid] = pool[0];
-  });
+        const topIds = set.tops;
+        const bottomIds = set.bots;
+        const selectionMap = {};
 
-  return { groundTruth: truth, correctTops };
-}
+        const okBtn = document.createElement('button');
+        okBtn.textContent = "OK";
+        document.body.appendChild(okBtn);
 
-function MatchingEncodingTrial(set) {
+        okBtn.onclick = () => {
 
-  const encoding = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: '',
-    choices: [],
-    response_ends_trial: false,
-    on_load: () => {
+          const {groundTruth, correctTops} =
+            deriveGroundTruth(topIds, bottomIds, selectionMap);
 
-      const selectionMap = {};
-      const topIds = set.tops;
-      const bottomIds = set.bots;
+          GroundTruthBySet[set.setId] = groundTruth;
 
-      const okBtn = document.createElement('button');
-      okBtn.textContent = "OK";
-      document.body.appendChild(okBtn);
+          // ✅ SINGLE CLEAN SCORING BLOCK
+          const encodingPerItem = topIds.map(t => ({
+            topId: t,
+            chosenBottom: selectionMap[t] || null,
+            trueBottom: groundTruth[t] || null,
+            correct: (selectionMap[t] === groundTruth[t]) ? 1 : 0
+          }));
 
-      okBtn.addEventListener('click', () => {
+          jsPsych.finishTrial({
+            setId: set.setId,
+            phase: 'encoding',
+            participantMapping: selectionMap,
+            assignedCorrectTopIds: correctTops,
+            derivedGroundTruth: groundTruth,
+            encodingPerItem
+          });
+        };
+      }
+    };
+  }
 
-        const { groundTruth, correctTops } =
-          deriveGroundTruth(topIds, bottomIds, selectionMap);
+  function MatchingRetrievalTrial(set){
 
-        GroundTruthBySet[set.setId] = groundTruth;
+    return {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: '',
+      choices: [],
+      response_ends_trial: false,
 
-        // FIXED: single correct version only
-        const encodingPerItem = topIds.map(topId => {
-          const chosenBottom = selectionMap[topId] || null;
-          const trueBottom = groundTruth[topId] || null;
-          const correct =
-            (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
+      on_load: () => {
 
-          return { topId, chosenBottom, trueBottom, correct };
-        });
-
-        jsPsych.finishTrial({
-          setId: set.setId,
-          phase: 'encoding',
-          participantMapping: selectionMap,
-          assignedCorrectTopIds: correctTops,
-          derivedGroundTruth: groundTruth,
-          encodingPerItem
-        });
-      });
-    }
-  };
-
-  return [encoding];
-}
-
-function MatchingRetrievalTrial(set) {
-
-  const retrieval = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: '',
-    choices: [],
-    response_ends_trial: false,
-    on_load: () => {
-
-      const selectionMap = {};
-      const shuffledTops = set.tops;
-      const shuffledBots = set.bots;
-
-      // FIX: define missing variable
-      const slotToTop = new Array(shuffledBots.length).fill(null);
-
-      const okBtn = document.createElement('button');
-      okBtn.textContent = "OK";
-      document.body.appendChild(okBtn);
-
-      okBtn.addEventListener('click', () => {
-
+        const topIds = set.tops;
+        const bottomIds = set.bots;
         const groundTruth = GroundTruthBySet[set.setId];
 
-        const perItem = shuffledTops.map(topId => {
-          const chosenBottom = selectionMap[topId] || null;
-          const trueBottom = groundTruth[topId] || null;
-          const accurate =
-            (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
+        const selectionMap = {};
 
-          return {
-            topId,
-            chosenBottom,
-            trueBottom,
-            accurate,
-            correct_based_on_encoding: accurate
-          };
-        });
+        const okBtn = document.createElement('button');
+        okBtn.textContent = "OK";
+        document.body.appendChild(okBtn);
 
-        const totalCorrect =
-          perItem.reduce((a, b) => a + b.accurate, 0);
+        okBtn.onclick = () => {
 
-        const accuracyByImage = {};
-        perItem.forEach(item => {
-          accuracyByImage[item.topId] = item.accurate;
-        });
+          const perItem = topIds.map(t => ({
+            topId: t,
+            chosenBottom: selectionMap[t] || null,
+            trueBottom: groundTruth[t] || null,
+            accurate: (selectionMap[t] === groundTruth[t]) ? 1 : 0
+          }));
 
-        jsPsych.finishTrial({
-          setId: set.setId,
-          phase: 'retrieval',
-          participantMapping: selectionMap,
-          groundTruthUsed: groundTruth,
-          perItem,
-          totalCorrect,
-          slotToTop,
-          shuffledBots,
-          accuracyByImage
-        });
-      });
-    }
-  };
+          const totalCorrect = perItem.reduce((a,b)=>a+b.accurate,0);
 
-  return [retrieval];
-}
+          const accuracyByImage = {};
+          perItem.forEach(d => accuracyByImage[d.topId] = d.accurate);
 
-// timeline
-const timeline = [];
-timeline.push(...MatchingEncodingTrial(SETS[0]));
-timeline.push(...MatchingRetrievalTrial(SETS[0]));
+          jsPsych.finishTrial({
+            setId: set.setId,
+            phase: 'retrieval',
+            participantMapping: selectionMap,
+            groundTruthUsed: groundTruth,
+            perItem,
+            totalCorrect,
+            accuracyByImage
+          });
+        };
+      }
+    };
+  }
 
-jsPsych.run(timeline);
+  const timeline = [
+    ...MatchingEncodingTrial(SETS[0]),
+    ...MatchingRetrievalTrial(SETS[0])
+  ];
+
+  jsPsych.run(timeline);
 
 });
 </script>
