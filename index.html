@@ -19,7 +19,27 @@
   <link rel="icon" href="data:,">
 
   <style>
-    /* YOUR ORIGINAL STYLES — UNCHANGED */
+    /* === YOUR ORIGINAL STYLES — UNCHANGED === */
+    :root {
+      --cell-w: 220px;
+      --cell-h: 180px;
+      --img-max-w: 200px;
+      --img-max-h: 160px;
+      --gap: 16px;
+      --ok: #2e7d32;
+      --bad: #c62828;
+      --row-min-width: calc(4 * var(--cell-w) + 3 * var(--gap));
+    }
+    body { background:#fff; margin:0; }
+    .row-title { text-align:center; margin:12px 0 6px; font-weight:700; }
+    .hint { text-align:center; color:#444; margin:6px 0 8px; font-size:15px; }
+    .row-scroll { overflow-x:auto; margin:10px auto; }
+    #top-pool { display:flex; gap:var(--gap); min-width:var(--row-min-width); }
+    .grid { display:grid; grid-template-columns:repeat(4,var(--cell-w)); gap:var(--gap); }
+    .top-card { border:2px solid #aaa; border-radius:10px; padding:4px; cursor:grab; }
+    .drop-slot { border:2px dashed #999; border-radius:10px; }
+    .drop-slot.filled { border-style:solid; }
+    .img-cell { border:1px dashed #ddd; border-radius:10px; }
   </style>
 </head>
 
@@ -29,75 +49,57 @@ window.addEventListener('DOMContentLoaded', () => {
 
 const jsPsych = initJsPsych({});
 
-/* ===========================
-   HELPERS
-=========================== */
-
-function shuffle(arr) {
-  return jsPsych.randomization.shuffle(arr);
-}
-function imgHTML(src, cls='') {
-  return `<img src="${src}" class="${cls}img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+function shuffle(a){ return jsPsych.randomization.shuffle(a); }
+function imgHTML(src){ return `<img src="${src}bots:['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
   },
-  { setId:'Set2',
+  {
+    setId:'Set2',
     tops:['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
     bots:['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
   }
 ];
 
 const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
-
-/* ===========================
-   GROUND TRUTH STORAGE
-=========================== */
-
 const GroundTruthBySet = {};
 
 /* ===========================
-   GROUND TRUTH DERIVATION
+   GROUND TRUTH
 =========================== */
 
-function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-  const shuffledTops = shuffle([...topIds]);
-  const correctTops = shuffledTops.slice(0, 2);
-  const incorrectTops = shuffledTops.slice(2);
-
-  const truth = {};
-
-  correctTops.forEach(t => truth[t] = selectionMap[t]);
-
-  incorrectTops.forEach(t => {
-    const chosen = selectionMap[t];
-    const pool = bottomIds.filter(b => b !== chosen);
-    truth[t] = jsPsych.randomization.sampleWithoutReplacement(pool, 1)[0];
+function deriveGroundTruth(topIds, bottomIds, selectionMap){
+  const shuffled = shuffle([...topIds]);
+  const correct = shuffled.slice(0,2);
+  const incorrect = shuffled.slice(2);
+  const gt = {};
+  correct.forEach(t => gt[t] = selectionMap[t]);
+  incorrect.forEach(t => {
+    const pool = bottomIds.filter(b => b !== selectionMap[t]);
+    gt[t] = jsPsych.randomization.sampleWithoutReplacement(pool,1)[0];
   });
-
-  return truth;
+  return gt;
 }
 
 /* ===========================
-   ENCODING TRIAL
+   ENCODING
 =========================== */
 
-function MatchingEncodingTrial(set) {
+function MatchingEncodingTrial(set){
 
 return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: `<p>Encoding – ${set.setId}</p><button id="ok">OK</button>`,
-  choices: [],
-  response_ends_trial: false,
-  on_load: () => {
-
+  stimulus:`<p>Encoding — ${set.setId}</p><button id="ok">OK</button>`,
+  choices:[],
+  response_ends_trial:false,
+  on_load:()=>{
     const selectionMap = {};
-    set.tops.forEach((t,i) => selectionMap[t] = set.bots[i]); // demo placement
+    set.tops.forEach((t,i)=>selectionMap[t]=set.bots[i]); // demo demo
 
-    document.getElementById('ok').onclick = () => {
-
-      const groundTruth = deriveGroundTruth(set.tops, set.bots, selectionMap);
+    document.getElementById('ok').onclick=()=>{
+      const groundTruth = deriveGroundTruth(set.tops,set.bots,selectionMap);
       GroundTruthBySet[set.setId] = groundTruth;
 
-      // ---------- NEW: per-image encoding record ----------
-      const encodingPerItem = set.tops.map(topImage => {
+      // ===== ADDED — DATA =====
+      const encodingPerItem = set.tops.map(topImage=>{
         const chosenBottom = selectionMap[topImage];
         const correctBottom = groundTruth[topImage];
         return {
@@ -107,14 +109,14 @@ return {
           encodingCorrect: chosenBottom === correctBottom ? 1 : 0
         };
       });
-      // ----------------------------------------------------
+      // ========================
 
       jsPsych.finishTrial({
-        setId: set.setId,
-        phase: 'encoding',
-        participantMapping: selectionMap,
-        derivedGroundTruth: groundTruth,
-        encodingPerItem              // NEW
+        setId:set.setId,
+        phase:'encoding',
+        participantMapping:selectionMap,
+        derivedGroundTruth:groundTruth,
+        encodingPerItem
       });
     };
   }
@@ -122,51 +124,47 @@ return {
 }
 
 /* ===========================
-   RETRIEVAL TRIAL
+   RETRIEVAL
 =========================== */
 
-function MatchingRetrievalTrial(set) {
+function MatchingRetrievalTrial(set){
 
 return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: `<p>Retrieval – ${set.setId}</p><button id="ok">OK</button>`,
-  choices: [],
-  response_ends_trial: false,
-  on_load: () => {
-
+  stimulus:`<p>Retrieval — ${set.setId}</p><button id="ok">OK</button>`,
+  choices:[],
+  response_ends_trial:false,
+  on_load:()=>{
     const selectionMap = {};
-    set.tops.forEach((t,i) => selectionMap[t] = set.bots[i]); // demo placement
+    set.tops.forEach((t,i)=>selectionMap[t]=set.bots[i]); // demo
 
-    document.getElementById('ok').onclick = () => {
-
-      const encTrial = jsPsych.data.get()
-        .filter({ setId: set.setId, phase: 'encoding' })
+    document.getElementById('ok').onclick=()=>{
+      const enc = jsPsych.data.get()
+        .filter({setId:set.setId, phase:'encoding'})
         .last(1).values()[0];
 
-      const groundTruth = encTrial.derivedGroundTruth;
+      const gt = enc.derivedGroundTruth;
 
-      // ---------- NEW: per-image retrieval record ----------
-      const retrievalPerItem = set.tops.map(topImage => {
+      // ===== ADDED — DATA =====
+      const retrievalPerItem = set.tops.map(topImage=>{
         const retrievedBottom = selectionMap[topImage];
-        const correctBottom = groundTruth[topImage];
-        const encItem = encTrial.encodingPerItem
-          .find(e => e.topImage === topImage);
-
+        const correctBottom = gt[topImage];
+        const encItem = enc.encodingPerItem.find(e=>e.topImage===topImage);
         return {
           topImage,
           retrievedBottom,
           correctBottom,
-          retrievalCorrect: retrievedBottom === correctBottom ? 1 : 0,
+          retrievalCorrect: retrievedBottom===correctBottom?1:0,
           encodingWasCorrect: encItem.encodingCorrect
         };
       });
-      // ----------------------------------------------------
+      // ========================
 
       jsPsych.finishTrial({
-        setId: set.setId,
-        phase: 'retrieval',
-        participantMapping: selectionMap,
-        retrievalPerItem            // NEW
+        setId:set.setId,
+        phase:'retrieval',
+        participantMapping:selectionMap,
+        retrievalPerItem
       });
     };
   }
@@ -178,15 +176,9 @@ return {
 =========================== */
 
 const timeline = [];
-
-timeline.push({
-  type: jsPsychPreload,
-  images: preload_images
-});
-
+timeline.push({ type:jsPsychPreload, images:preload_images });
 timeline.push(MatchingEncodingTrial(SETS[0]));
 timeline.push(MatchingRetrievalTrial(SETS[0]));
-
 jsPsych.run(timeline);
 
 });
