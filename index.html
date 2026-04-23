@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>LFF Matching Task</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>LFF Matching Task</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
-<script src="https://unpkg.com/jspsych@7.3.4" defer></script>
+  <!-- jsPsych v7 -->
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
 
-<script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3" defer></script>
-<script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3" defer></script>
-<script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3" defer></script>
-<script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0" defer></script>
-<script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3" defer></script>
+  <!-- Plugins -->
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3"></script>
 
-<link rel="icon" href="data:,">
+  <link rel="icon" href="data:,">
 
-<style>
-/* YOUR ORIGINAL STYLES – UNCHANGED */
-</style>
+  <style>
+    /* YOUR ORIGINAL STYLES — UNCHANGED */
+  </style>
 </head>
 
 <body>
@@ -27,39 +29,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
 const jsPsych = initJsPsych({});
 
-/* ------------------------------
+/* ===========================
    HELPERS
------------------------------- */
+=========================== */
 
 function shuffle(arr) {
   return jsPsych.randomization.shuffle(arr);
 }
 function imgHTML(src, cls='') {
-  return `<img src="${src}" class="${clsBot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+  return `<img src="${src}" class="${cls}img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
   },
-  {
-    setId: 'Set2',
-    tops: ['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
-    bots: ['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
+  { setId:'Set2',
+    tops:['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
+    bots:['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
   }
 ];
 
 const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
 
-/* ------------------------------
+/* ===========================
    GROUND TRUTH STORAGE
------------------------------- */
+=========================== */
 
 const GroundTruthBySet = {};
 
-/* ------------------------------
+/* ===========================
    GROUND TRUTH DERIVATION
------------------------------- */
+=========================== */
 
 function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-  const shuffled = shuffle([...topIds]);
-  const correctTops = shuffled.slice(0,2);
-  const incorrectTops = shuffled.slice(2);
+  const shuffledTops = shuffle([...topIds]);
+  const correctTops = shuffledTops.slice(0, 2);
+  const incorrectTops = shuffledTops.slice(2);
 
   const truth = {};
 
@@ -68,26 +69,21 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap) {
   incorrectTops.forEach(t => {
     const chosen = selectionMap[t];
     const pool = bottomIds.filter(b => b !== chosen);
-    truth[t] = jsPsych.randomization.sampleWithoutReplacement(pool,1)[0];
+    truth[t] = jsPsych.randomization.sampleWithoutReplacement(pool, 1)[0];
   });
 
   return truth;
 }
 
-/* ------------------------------
+/* ===========================
    ENCODING TRIAL
------------------------------- */
+=========================== */
 
 function MatchingEncodingTrial(set) {
 
 return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: () => {
-    return `
-      <h3>Encoding – ${set.setId}</h3>
-      <button id="ok">OK</button>
-    `;
-  },
+  stimulus: `<p>Encoding – ${set.setId}</p><button id="ok">OK</button>`,
   choices: [],
   response_ends_trial: false,
   on_load: () => {
@@ -100,38 +96,40 @@ return {
       const groundTruth = deriveGroundTruth(set.tops, set.bots, selectionMap);
       GroundTruthBySet[set.setId] = groundTruth;
 
-      const encodingPerItem = set.tops.map(top => {
-        const chosen = selectionMap[top];
-        const correctBottom = groundTruth[top];
+      // ---------- NEW: per-image encoding record ----------
+      const encodingPerItem = set.tops.map(topImage => {
+        const chosenBottom = selectionMap[topImage];
+        const correctBottom = groundTruth[topImage];
         return {
-          topImage: top,
-          chosenBottom: chosen,
+          topImage,
+          chosenBottom,
           correctBottom,
-          encodingCorrect: chosen === correctBottom ? 1 : 0
+          encodingCorrect: chosenBottom === correctBottom ? 1 : 0
         };
       });
+      // ----------------------------------------------------
 
       jsPsych.finishTrial({
         setId: set.setId,
         phase: 'encoding',
         participantMapping: selectionMap,
         derivedGroundTruth: groundTruth,
-        encodingPerItem
+        encodingPerItem              // NEW
       });
     };
   }
 };
 }
 
-/* ------------------------------
+/* ===========================
    RETRIEVAL TRIAL
------------------------------- */
+=========================== */
 
 function MatchingRetrievalTrial(set) {
 
 return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: `<h3>Retrieval – ${set.setId}</h3><button id="ok">OK</button>`,
+  stimulus: `<p>Retrieval – ${set.setId}</p><button id="ok">OK</button>`,
   choices: [],
   response_ends_trial: false,
   on_load: () => {
@@ -142,39 +140,42 @@ return {
     document.getElementById('ok').onclick = () => {
 
       const encTrial = jsPsych.data.get()
-        .filter({ phase: 'encoding', setId: set.setId })
+        .filter({ setId: set.setId, phase: 'encoding' })
         .last(1).values()[0];
 
       const groundTruth = encTrial.derivedGroundTruth;
 
-      const retrievalPerItem = set.tops.map(top => {
-        const retrieved = selectionMap[top];
-        const correctBottom = groundTruth[top];
-        const encItem = encTrial.encodingPerItem.find(e => e.topImage === top);
+      // ---------- NEW: per-image retrieval record ----------
+      const retrievalPerItem = set.tops.map(topImage => {
+        const retrievedBottom = selectionMap[topImage];
+        const correctBottom = groundTruth[topImage];
+        const encItem = encTrial.encodingPerItem
+          .find(e => e.topImage === topImage);
 
         return {
-          topImage: top,
-          retrievedBottom: retrieved,
-          encodingCorrectBottom: correctBottom,
-          retrievalCorrect: retrieved === correctBottom ? 1 : 0,
+          topImage,
+          retrievedBottom,
+          correctBottom,
+          retrievalCorrect: retrievedBottom === correctBottom ? 1 : 0,
           encodingWasCorrect: encItem.encodingCorrect
         };
       });
+      // ----------------------------------------------------
 
       jsPsych.finishTrial({
         setId: set.setId,
         phase: 'retrieval',
         participantMapping: selectionMap,
-        retrievalPerItem
+        retrievalPerItem            // NEW
       });
     };
   }
 };
 }
 
-/* ------------------------------
+/* ===========================
    TIMELINE
------------------------------- */
+=========================== */
 
 const timeline = [];
 
