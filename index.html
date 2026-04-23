@@ -247,8 +247,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const timeline = [
-    ...MatchingEncodingTrial(SETS[0]),
-    ...MatchingRetrievalTrial(SETS[0])
+    MatchingEncodingTrial(SETS[0]),
+    MatchingRetrievalTrial(SETS[0])
   ];
 
   jsPsych.run(timeline);
