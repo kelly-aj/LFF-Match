@@ -21,6 +21,11 @@
 window.addEventListener('DOMContentLoaded', () => {
 
 const jsPsych = initJsPsych({ on_finish: () => {} });
+const jsPsychHtmlButtonResponse = window.jsPsychHtmlButtonResponse;
+const jsPsychHtmlKeyboardResponse = window.jsPsychHtmlKeyboardResponse;
+const jsPsychInstructions = window.jsPsychInstructions;
+const jsPsychPreload = window.jsPsychPreload;
+const jsPsychHtmlSliderResponse = window.jsPsychHtmlSliderResponse;
 
 function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
 
