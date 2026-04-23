@@ -16,16 +16,12 @@
 
   <link rel="icon" href="data:,">
 </head>
+
 <body>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
 
 const jsPsych = initJsPsych({ on_finish: () => {} });
-const jsPsychHtmlButtonResponse = window.jsPsychHtmlButtonResponse;
-const jsPsychHtmlKeyboardResponse = window.jsPsychHtmlKeyboardResponse;
-const jsPsychInstructions = window.jsPsychInstructions;
-const jsPsychPreload = window.jsPsychPreload;
-const jsPsychHtmlSliderResponse = window.jsPsychHtmlSliderResponse;
 
 function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
 
@@ -69,25 +65,24 @@ function MatchingEncodingTrial(set) {
       const bottomIds = set.bots;
 
       const okBtn = document.createElement('button');
+      okBtn.textContent = "OK";
       document.body.appendChild(okBtn);
 
       okBtn.addEventListener('click', () => {
 
-        const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+        const { groundTruth, correctTops } =
+          deriveGroundTruth(topIds, bottomIds, selectionMap);
+
         GroundTruthBySet[set.setId] = groundTruth;
 
-        // FIX: only one declaration
+        // FIXED: single correct version only
         const encodingPerItem = topIds.map(topId => {
           const chosenBottom = selectionMap[topId] || null;
           const trueBottom = groundTruth[topId] || null;
-          const correct = (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
+          const correct =
+            (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
 
-          return {
-            topId,
-            chosenBottom,
-            trueBottom,
-            correct
-          };
+          return { topId, chosenBottom, trueBottom, correct };
         });
 
         jsPsych.finishTrial({
@@ -107,8 +102,6 @@ function MatchingEncodingTrial(set) {
 
 function MatchingRetrievalTrial(set) {
 
-  let groundTruth = GroundTruthBySet[set.setId] || {};
-
   const retrieval = {
     type: jsPsychHtmlButtonResponse,
     stimulus: '',
@@ -120,17 +113,22 @@ function MatchingRetrievalTrial(set) {
       const shuffledTops = set.tops;
       const shuffledBots = set.bots;
 
+      // FIX: define missing variable
       const slotToTop = new Array(shuffledBots.length).fill(null);
 
       const okBtn = document.createElement('button');
+      okBtn.textContent = "OK";
       document.body.appendChild(okBtn);
 
       okBtn.addEventListener('click', () => {
 
+        const groundTruth = GroundTruthBySet[set.setId];
+
         const perItem = shuffledTops.map(topId => {
           const chosenBottom = selectionMap[topId] || null;
           const trueBottom = groundTruth[topId] || null;
-          const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+          const accurate =
+            (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
 
           return {
             topId,
@@ -141,8 +139,8 @@ function MatchingRetrievalTrial(set) {
           };
         });
 
-        // FIX: define totalCorrect
-        const totalCorrect = perItem.reduce((a,b) => a + b.accurate, 0);
+        const totalCorrect =
+          perItem.reduce((a, b) => a + b.accurate, 0);
 
         const accuracyByImage = {};
         perItem.forEach(item => {
@@ -167,7 +165,7 @@ function MatchingRetrievalTrial(set) {
   return [retrieval];
 }
 
-// FIX: timeline moved OUTSIDE click handler
+// timeline
 const timeline = [];
 timeline.push(...MatchingEncodingTrial(SETS[0]));
 timeline.push(...MatchingRetrievalTrial(SETS[0]));
