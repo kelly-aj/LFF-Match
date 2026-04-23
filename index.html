@@ -17,7 +17,7 @@
 <link rel="icon" href="data:,">
 
 <style>
-/* styles unchanged */
+/* YOUR ORIGINAL STYLES – UNCHANGED */
 </style>
 </head>
 
@@ -27,114 +27,137 @@ window.addEventListener('DOMContentLoaded', () => {
 
 const jsPsych = initJsPsych({});
 
-/* ---------------------------------
-   STORAGE
---------------------------------- */
+/* ------------------------------
+   HELPERS
+------------------------------ */
 
-const GroundTruthBySet = {};     // top -> correct bottom
-const EncodingAccuracyBySet = {}; // top -> 0/1
+function shuffle(arr) {
+  return jsPsych.randomization.shuffle(arr);
+}
+function imgHTML(src, cls='') {
+  return `<img src="${src}" class="${clsBot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+  },
+  {
+    setId: 'Set2',
+    tops: ['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
+    bots: ['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
+  }
+];
 
-/* ---------------------------------
-   DERIVE GROUND TRUTH
---------------------------------- */
+const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
+
+/* ------------------------------
+   GROUND TRUTH STORAGE
+------------------------------ */
+
+const GroundTruthBySet = {};
+
+/* ------------------------------
+   GROUND TRUTH DERIVATION
+------------------------------ */
 
 function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-  const shuffled = jsPsych.randomization.shuffle([...topIds]);
+  const shuffled = shuffle([...topIds]);
   const correctTops = shuffled.slice(0,2);
   const incorrectTops = shuffled.slice(2);
 
-  const gt = {};
+  const truth = {};
 
-  correctTops.forEach(t => gt[t] = selectionMap[t]);
+  correctTops.forEach(t => truth[t] = selectionMap[t]);
 
   incorrectTops.forEach(t => {
     const chosen = selectionMap[t];
     const pool = bottomIds.filter(b => b !== chosen);
-    gt[t] = jsPsych.randomization.sampleWithoutReplacement(pool,1)[0];
+    truth[t] = jsPsych.randomization.sampleWithoutReplacement(pool,1)[0];
   });
 
-  return { groundTruth: gt };
+  return truth;
 }
 
-/* ---------------------------------
-   ENCODING
---------------------------------- */
+/* ------------------------------
+   ENCODING TRIAL
+------------------------------ */
 
 function MatchingEncodingTrial(set) {
 
-return [{
+return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: "...",
+  stimulus: () => {
+    return `
+      <h3>Encoding – ${set.setId}</h3>
+      <button id="ok">OK</button>
+    `;
+  },
   choices: [],
   response_ends_trial: false,
   on_load: () => {
 
     const selectionMap = {};
+    set.tops.forEach((t,i) => selectionMap[t] = set.bots[i]); // demo placement
 
-    /* drag/drop handlers unchanged */
+    document.getElementById('ok').onclick = () => {
 
-    document.getElementById('ok-encode').addEventListener('click', () => {
-
-      const { groundTruth } = deriveGroundTruth(set.tops, set.bots, selectionMap);
-
+      const groundTruth = deriveGroundTruth(set.tops, set.bots, selectionMap);
       GroundTruthBySet[set.setId] = groundTruth;
 
-      const perItem = set.tops.map(top => {
+      const encodingPerItem = set.tops.map(top => {
         const chosen = selectionMap[top];
         const correctBottom = groundTruth[top];
-        const correct = chosen === correctBottom ? 1 : 0;
         return {
           topImage: top,
           chosenBottom: chosen,
-          computerCorrectBottom: correctBottom,
-          computerSaysCorrect: correct
+          correctBottom,
+          encodingCorrect: chosen === correctBottom ? 1 : 0
         };
       });
-
-      EncodingAccuracyBySet[set.setId] =
-        Object.fromEntries(perItem.map(p => [p.topImage, p.computerSaysCorrect]));
 
       jsPsych.finishTrial({
         setId: set.setId,
         phase: 'encoding',
         participantMapping: selectionMap,
-        groundTruth,
-        encodingPerItem: perItem
+        derivedGroundTruth: groundTruth,
+        encodingPerItem
       });
-    });
+    };
   }
-}];
+};
 }
 
-/* ---------------------------------
-   RETRIEVAL
---------------------------------- */
+/* ------------------------------
+   RETRIEVAL TRIAL
+------------------------------ */
 
 function MatchingRetrievalTrial(set) {
 
-const groundTruth = GroundTruthBySet[set.setId];
-const encodingAccuracy = EncodingAccuracyBySet[set.setId];
-
-return [{
+return {
   type: jsPsychHtmlButtonResponse,
-  stimulus: "...",
+  stimulus: `<h3>Retrieval – ${set.setId}</h3><button id="ok">OK</button>`,
   choices: [],
   response_ends_trial: false,
   on_load: () => {
 
     const selectionMap = {};
+    set.tops.forEach((t,i) => selectionMap[t] = set.bots[i]); // demo placement
 
-    document.getElementById('ok-retr').addEventListener('click', () => {
+    document.getElementById('ok').onclick = () => {
 
-      const perItem = set.tops.map(top => {
+      const encTrial = jsPsych.data.get()
+        .filter({ phase: 'encoding', setId: set.setId })
+        .last(1).values()[0];
+
+      const groundTruth = encTrial.derivedGroundTruth;
+
+      const retrievalPerItem = set.tops.map(top => {
         const retrieved = selectionMap[top];
-        const trueBottom = groundTruth[top];
+        const correctBottom = groundTruth[top];
+        const encItem = encTrial.encodingPerItem.find(e => e.topImage === top);
+
         return {
           topImage: top,
           retrievedBottom: retrieved,
-          encodingCorrectBottom: trueBottom,
-          retrievalCorrect: retrieved === trueBottom ? 1 : 0,
-          encodingWasCorrect: encodingAccuracy[top]
+          encodingCorrectBottom: correctBottom,
+          retrievalCorrect: retrieved === correctBottom ? 1 : 0,
+          encodingWasCorrect: encItem.encodingCorrect
         };
       });
 
@@ -142,14 +165,28 @@ return [{
         setId: set.setId,
         phase: 'retrieval',
         participantMapping: selectionMap,
-        retrievalPerItem: perItem
+        retrievalPerItem
       });
-    });
+    };
   }
-}];
+};
 }
 
-/* rest of your timeline unchanged */
+/* ------------------------------
+   TIMELINE
+------------------------------ */
+
+const timeline = [];
+
+timeline.push({
+  type: jsPsychPreload,
+  images: preload_images
+});
+
+timeline.push(MatchingEncodingTrial(SETS[0]));
+timeline.push(MatchingRetrievalTrial(SETS[0]));
+
+jsPsych.run(timeline);
 
 });
 </script>
