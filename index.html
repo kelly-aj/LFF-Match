@@ -5,342 +5,171 @@
   <title>LFF Matching Task</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- jsPsych v7 (CDN) -->
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
   <script src="https://unpkg.com/jspsych@7.3.4" defer></script>
 
-  <!-- Plugins (CDN) -->
   <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0" defer></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-slider-response@1.1.3" defer></script>
 
-  <!-- Stop favicon 404 noise -->
   <link rel="icon" href="data:,">
-
-  <style>
-    :root {
-      --cell-w: 220px;
-      --cell-h: 180px;
-      --img-max-w: 200px;
-      --img-max-h: 160px;
-      --gap: 16px;
-      --ok: #2e7d32;
-      --bad: #c62828;
-      --row-min-width: calc(4 * var(--cell-w) + 3 * var(--gap));
-    }
-
-    body { background: #fff; margin: 0; }
-
-    .row-title { text-align: center; margin: 12px 0 6px; font-weight: 700; }
-    .hint { text-align: center; color: #444; margin: 6px 0 8px; font-size: 15px; }
-
-    .row-scroll {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      margin: 10px auto;
-      max-width: 100%;
-    }
-
-    #top-pool {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: flex-start;
-      align-items: center;
-      gap: var(--gap);
-      min-width: var(--row-min-width);
-      margin: 0 auto;
-      padding: 0 4px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, var(--cell-w));
-      gap: var(--gap);
-      align-items: start;
-      justify-content: center;
-      min-width: var(--row-min-width);
-      margin: 10px auto;
-      padding: 0 4px;
-    }
-
-    .top-card {
-      width: var(--cell-w);
-      min-height: var(--cell-h);
-      border: 2px solid #aaa;
-      border-radius: 10px;
-      background: #fff;
-      padding: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: grab;
-      position: relative;
-      user-select: none;
-    }
-    .top-card:active { cursor: grabbing; }
-    .top-card img {
-      max-width: var(--img-max-w);
-      max-height: var(--img-max-h);
-      object-fit: contain;
-      pointer-events: none;
-      display: block;
-    }
-
-    .drop-slot {
-      width: var(--cell-w);
-      height: var(--cell-h);
-      border: 2px dashed #999;
-      border-radius: 10px;
-      background: #f6f6ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      color: #666;
-      font-size: 15px;
-      text-align: center;
-    }
-    .drop-slot.filled {
-      border-style: solid;
-      background: #eef7ff;
-      color: #222;
-    }
-    .drop-slot img {
-      max-width: var(--img-max-w);
-      max-height: var(--img-max-h);
-      object-fit: contain;
-      display: block;
-    }
-
-    .img-cell {
-      width: var(--cell-w);
-      min-height: var(--cell-h);
-      border: 1px dashed #ddd;
-      background: #fafafa;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      padding: 4px;
-    }
-    .img-cell img {
-      max-width: var(--img-max-w);
-      max-height: var(--img-max-h);
-      object-fit: contain;
-      display: block;
-    }
-
-    .ok-wrap { margin-top: 16px; text-align: center; }
-    button { padding: 10px 16px; font-size: 16px; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .badge {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      color: #fff;
-      z-index: 2;
-    }
-    .badge.correct { background: var(--ok); }
-    .badge.incorrect { background: var(--bad); }
-    .outline-correct { outline: 4px solid var(--ok); outline-offset: 2px; }
-    .outline-incorrect { outline: 4px solid var(--bad); outline-offset: 2px; }
-
-    .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
-
-    .rating-img {
-      display: block;
-      margin: 0 auto;
-      max-width: min(260px, 60vw);
-      max-height: min(180px, 35vh);
-      object-fit: contain;
-    }
-  </style>
 </head>
 <body>
-  <script>
-    window.addEventListener('error', (e) => {
-      const pre = document.createElement('pre');
-      pre.textContent = 'Error: ' + e.message;
-      pre.style.color = 'white';
-      pre.style.background = '#c0392b';
-      pre.style.padding = '12px';
-      pre.style.margin = 0;
-      pre.style.font = '14px/1.4 ui-monospace, monospace';
-      document.body.prepend(pre);
-    });
+<script>
+window.addEventListener('DOMContentLoaded', () => {
 
-    window.addEventListener('DOMContentLoaded', () => {
+const jsPsych = initJsPsych({ on_finish: () => {} });
 
-      const jsPsych = initJsPsych({ on_finish: () => {} });
+function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
 
-      function shuffle(arr) { return jsPsych.randomization.shuffle(arr); }
+const SETS = [
+  { setId: 'Set1',
+    tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
+    bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+  }
+];
 
-      const SETS = [
-        { setId: 'Set1',
-          tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
-          bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
-        }
-      ];
+const GroundTruthBySet = {};
 
-      const GroundTruthBySet = {};
+function deriveGroundTruth(topIds, bottomIds, selectionMap) {
+  const topsShuffled = shuffle([...topIds]);
+  const correctTops = topsShuffled.slice(0, 2);
+  const incorrectTops = topsShuffled.slice(2);
 
-      function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-        const topsShuffled = shuffle([...topIds]);
-        const correctTops = topsShuffled.slice(0, 2);
-        const incorrectTops = topsShuffled.slice(2);
+  const truth = {};
+  correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
 
-        const truth = {};
-        correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
+  incorrectTops.forEach(tid => {
+    const chosen = selectionMap[tid];
+    const pool = bottomIds.filter(b => b !== chosen);
+    truth[tid] = pool[0];
+  });
 
-        incorrectTops.forEach(tid => {
-          const chosen = selectionMap[tid];
-          const pool = bottomIds.filter(b => b !== chosen);
-          truth[tid] = pool[0];
+  return { groundTruth: truth, correctTops };
+}
+
+function MatchingEncodingTrial(set) {
+
+  const encoding = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: '',
+    choices: [],
+    response_ends_trial: false,
+    on_load: () => {
+
+      const selectionMap = {};
+      const topIds = set.tops;
+      const bottomIds = set.bots;
+
+      const okBtn = document.createElement('button');
+      document.body.appendChild(okBtn);
+
+      okBtn.addEventListener('click', () => {
+
+        const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+        GroundTruthBySet[set.setId] = groundTruth;
+
+        // FIX: only one declaration
+        const encodingPerItem = topIds.map(topId => {
+          const chosenBottom = selectionMap[topId] || null;
+          const trueBottom = groundTruth[topId] || null;
+          const correct = (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
+
+          return {
+            topId,
+            chosenBottom,
+            trueBottom,
+            correct
+          };
         });
 
-        return { groundTruth: truth, correctTops };
-      }
-
-      function MatchingEncodingTrial(set) {
-
-        const encoding = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: '',
-          choices: [],
-          response_ends_trial: false,
-          on_load: () => {
-
-            const selectionMap = {};
-            const topIds = set.tops;
-            const bottomIds = set.bots;
-
-            const okBtn = document.createElement('button');
-            document.body.appendChild(okBtn);
-
-            okBtn.addEventListener('click', () => {
-
-              const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
-              GroundTruthBySet[set.setId] = groundTruth;
-
-              // ✅ NEW
-              const encodingPerItem = topIds.map(topId => {
-                const chosenBottom = selectionMap[topId] || null;
-                const trueBottom = groundTruth[topId] || null;
-                const correct = (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
-
-                return {
-                  topId,
-                  chosenBottom,
-                  trueBottom,
-                  correct
-                };
-              });
-
- // NEW: per-item encoding accuracy
-const encodingPerItem = topIds.map(topId => {
-  const chosenBottom = selectionMap[topId] || null;
-  const trueBottom = groundTruth[topId] || null;
-  const correct = (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
-
-  return {
-    topId,
-    chosenBottom,
-    trueBottom,
-    correct
+        jsPsych.finishTrial({
+          setId: set.setId,
+          phase: 'encoding',
+          participantMapping: selectionMap,
+          assignedCorrectTopIds: correctTops,
+          derivedGroundTruth: groundTruth,
+          encodingPerItem
+        });
+      });
+    }
   };
-});
 
-jsPsych.finishTrial({
-  setId: set.setId,
-  phase: 'encoding',
-  participantMapping: selectionMap,
-  assignedCorrectTopIds: correctTops,
-  derivedGroundTruth: groundTruth,
+  return [encoding];
+}
 
-  // NEW
-  encodingPerItem
-});
-              });
-            });
-          }
-        };
+function MatchingRetrievalTrial(set) {
 
-        return [encoding];
-      }
+  let groundTruth = GroundTruthBySet[set.setId] || {};
 
-      function MatchingRetrievalTrial(set) {
+  const retrieval = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: '',
+    choices: [],
+    response_ends_trial: false,
+    on_load: () => {
 
-        let groundTruth = GroundTruthBySet[set.setId];
+      const selectionMap = {};
+      const shuffledTops = set.tops;
+      const shuffledBots = set.bots;
 
-        const retrieval = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: '',
-          choices: [],
-          response_ends_trial: false,
-          on_load: () => {
+      const slotToTop = new Array(shuffledBots.length).fill(null);
 
-            const selectionMap = {};
-            const shuffledTops = set.tops;
-            const shuffledBots = set.bots;
+      const okBtn = document.createElement('button');
+      document.body.appendChild(okBtn);
 
-            const okBtn = document.createElement('button');
-            document.body.appendChild(okBtn);
+      okBtn.addEventListener('click', () => {
 
-            okBtn.addEventListener('click', () => {
+        const perItem = shuffledTops.map(topId => {
+          const chosenBottom = selectionMap[topId] || null;
+          const trueBottom = groundTruth[topId] || null;
+          const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
 
-              // ✅ MODIFIED
-              const perItem = shuffledTops.map(topId => {
-  const chosenBottom = selectionMap[topId] || null;
-  const trueBottom = groundTruth[topId] || null;
-  const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+          return {
+            topId,
+            chosenBottom,
+            trueBottom,
+            accurate,
+            correct_based_on_encoding: accurate
+          };
+        });
 
-  return {
-    topId,
-    chosenBottom,
-    trueBottom,
-    accurate,
+        // FIX: define totalCorrect
+        const totalCorrect = perItem.reduce((a,b) => a + b.accurate, 0);
 
-    // NEW: explicitly tied to encoding ground truth
-    correct_based_on_encoding: accurate
+        const accuracyByImage = {};
+        perItem.forEach(item => {
+          accuracyByImage[item.topId] = item.accurate;
+        });
+
+        jsPsych.finishTrial({
+          setId: set.setId,
+          phase: 'retrieval',
+          participantMapping: selectionMap,
+          groundTruthUsed: groundTruth,
+          perItem,
+          totalCorrect,
+          slotToTop,
+          shuffledBots,
+          accuracyByImage
+        });
+      });
+    }
   };
+
+  return [retrieval];
+}
+
+// FIX: timeline moved OUTSIDE click handler
+const timeline = [];
+timeline.push(...MatchingEncodingTrial(SETS[0]));
+timeline.push(...MatchingRetrievalTrial(SETS[0]));
+
+jsPsych.run(timeline);
+
 });
-
-// NEW: simple image-level lookup
-const accuracyByImage = {};
-perItem.forEach(item => {
-  accuracyByImage[item.topId] = item.accurate;
-});
-
-              jsPsych.finishTrial({
-  setId: set.setId,
-  phase: 'retrieval',
-  participantMapping: selectionMap,
-  groundTruthUsed: groundTruth,
-  perItem,
-  totalCorrect,
-  slotToTop,
-  shuffledBots,
-
-  // NEW
-  accuracyByImage
-});
-      const timeline = [];
-      timeline.push(...MatchingEncodingTrial(SETS[0]));
-      timeline.push(...MatchingRetrievalTrial(SETS[0]));
-
-      jsPsych.run(timeline);
-    });
-  </script>
+</script>
 </body>
 </html>
