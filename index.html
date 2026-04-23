@@ -247,15 +247,30 @@
                 };
               });
 
-              jsPsych.finishTrial({
-                setId: set.setId,
-                phase: 'encoding',
-                participantMapping: selectionMap,
-                assignedCorrectTopIds: correctTops,
-                derivedGroundTruth: groundTruth,
+ // NEW: per-item encoding accuracy
+const encodingPerItem = topIds.map(topId => {
+  const chosenBottom = selectionMap[topId] || null;
+  const trueBottom = groundTruth[topId] || null;
+  const correct = (chosenBottom && trueBottom && chosenBottom === trueBottom) ? 1 : 0;
 
-                // ✅ NEW
-                encodingPerItem
+  return {
+    topId,
+    chosenBottom,
+    trueBottom,
+    correct
+  };
+});
+
+jsPsych.finishTrial({
+  setId: set.setId,
+  phase: 'encoding',
+  participantMapping: selectionMap,
+  assignedCorrectTopIds: correctTops,
+  derivedGroundTruth: groundTruth,
+
+  // NEW
+  encodingPerItem
+});
               });
             });
           }
@@ -286,46 +301,40 @@
 
               // ✅ MODIFIED
               const perItem = shuffledTops.map(topId => {
-                const chosenBottom = selectionMap[topId] || null;
-                const trueBottom = groundTruth[topId] || null;
+  const chosenBottom = selectionMap[topId] || null;
+  const trueBottom = groundTruth[topId] || null;
+  const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
 
-                const correct = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+  return {
+    topId,
+    chosenBottom,
+    trueBottom,
+    accurate,
 
-                return {
-                  topId,
-                  chosenBottom,
-                  trueBottom,
-                  correct,
-                  correct_based_on_encoding: correct
-                };
-              });
+    // NEW: explicitly tied to encoding ground truth
+    correct_based_on_encoding: accurate
+  };
+});
 
-              const totalCorrect = perItem.reduce((a, b) => a + b.correct, 0);
-
-              // ✅ NEW
-              const accuracyByImage = {};
-              perItem.forEach(item => {
-                accuracyByImage[item.topId] = item.correct;
-              });
+// NEW: simple image-level lookup
+const accuracyByImage = {};
+perItem.forEach(item => {
+  accuracyByImage[item.topId] = item.accurate;
+});
 
               jsPsych.finishTrial({
-                setId: set.setId,
-                phase: 'retrieval',
-                participantMapping: selectionMap,
-                groundTruthUsed: groundTruth,
-                perItem,
-                totalCorrect,
+  setId: set.setId,
+  phase: 'retrieval',
+  participantMapping: selectionMap,
+  groundTruthUsed: groundTruth,
+  perItem,
+  totalCorrect,
+  slotToTop,
+  shuffledBots,
 
-                // ✅ NEW
-                accuracyByImage
-              });
-            });
-          }
-        };
-
-        return [retrieval];
-      }
-
+  // NEW
+  accuracyByImage
+});
       const timeline = [];
       timeline.push(...MatchingEncodingTrial(SETS[0]));
       timeline.push(...MatchingRetrievalTrial(SETS[0]));
