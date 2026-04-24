@@ -630,7 +630,31 @@
         choices: [' '],
         data: { phase: 'ready_to_begin' }
       };
-
+      const attentionCheck = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div style="max-width:800px; margin:0 auto; text-align:center;">
+            <h3>Attention Check</h3>
+            <p>Please select <strong>Strongly Disagree</strong> for this question.</p>
+            <p style="margin-top:20px;">
+              I carefully read all study instructions before responding.
+            </p>
+          </div>
+        `,
+        choices: [
+          'Strongly Disagree',
+          'Disagree',
+          'Neither Agree nor Disagree',
+          'Agree',
+          'Strongly Agree'
+        ],
+        data: { phase: 'attention_check' },
+        on_finish: (data) => {
+          data.attention_response = data.response;
+          data.attention_correct = data.response === 0 ? 1 : 0;
+        }
+      };
+      
       const shortBreakAfterHalf1 = {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `
@@ -654,6 +678,7 @@
 
       timeline.push(welcomeInstructions);
       timeline.push(readyToBegin);
+      timeline.push(attentionCheck);
 
       const half1 = shuffle([SETS[0], SETS[1]]);
       const half2 = shuffle([SETS[2], SETS[3]]);
