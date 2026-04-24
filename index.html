@@ -532,23 +532,23 @@ function MatchingEncodingTrial(set) {
             okBtn.addEventListener('click', () => {
   if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-  const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
-  GroundTruthBySet[set.setId] = groundTruth;
-
-  // NEW: Create explicit encoding matches record
-  const encodingMatches = topIds.map(topId => ({
-    top_image: topId,
-    bottom_image: selectionMap[topId],
-    is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
-  }));
+  const perItem = shuffledTops.map(topId => {
+    const chosenBottom = selectionMap[topId] || null;
+    const trueBottom = groundTruth[topId] || null;
+    const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+    return { topId, chosenBottom, trueBottom, accurate };
+  });
+  const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
 
   jsPsych.finishTrial({
     setId: set.setId,
-    phase: 'encoding',
+    phase: 'retrieval',
     participantMapping: selectionMap,
-    assignedCorrectTopIds: correctTops,
-    derivedGroundTruth: groundTruth,
-    encoding_matches: encodingMatches  // NEW: Explicit matches array
+    groundTruthUsed: groundTruth,
+    perItem,
+    totalCorrect,
+    slotToTop,                 // keep exact placement order
+    shuffledBots               // keep exact bottom order
   });
 });
             }  // <-- ADD THIS CLOSING BRACE FOR on_load
