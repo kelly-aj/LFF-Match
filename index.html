@@ -530,29 +530,29 @@ function MatchingEncodingTrial(set) {
             });
 
             okBtn.addEventListener('click', () => {
-  if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-  const perItem = shuffledTops.map(topId => {
-    const chosenBottom = selectionMap[topId] || null;
-    const trueBottom = groundTruth[topId] || null;
-    const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
-    return { topId, chosenBottom, trueBottom, accurate };
-  });
-  const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
+              const perItem = shuffledTops.map(topId => {
+                const chosenBottom = selectionMap[topId] || null;
+                const trueBottom = groundTruth[topId] || null;
+                const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+                return { topId, chosenBottom, trueBottom, accurate };
+              });
+              const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
 
-  jsPsych.finishTrial({
-    setId: set.setId,
-    phase: 'retrieval',
-    participantMapping: selectionMap,
-    groundTruthUsed: groundTruth,
-    perItem,
-    totalCorrect,
-    slotToTop,                 // keep exact placement order
-    shuffledBots               // keep exact bottom order
-  });
-});
-            }  // <-- ADD THIS CLOSING BRACE FOR on_load
-          }
+              jsPsych.finishTrial({
+                setId: set.setId,
+                phase: 'retrieval',
+                participantMapping: selectionMap,
+                groundTruthUsed: groundTruth,
+                perItem,
+                totalCorrect,
+                slotToTop,
+                shuffledBots
+              });
+            });
+            }  // CLOSES on_load
+          }  // CLOSES retrieval object
         };
         const retrievalFeedback = {
           type: jsPsychHtmlButtonResponse,
