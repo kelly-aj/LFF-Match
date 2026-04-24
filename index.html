@@ -401,24 +401,17 @@
         return [encoding, encodingFeedback, ...ratings];
       }
 
-
-function MatchingRetrievalTrial(set) {
-  let groundTruth = GroundTruthBySet[set.setId];
-
-  if (!groundTruth) {
-    const enc = jsPsych.data
-      .get()
-      .filter({ setId: set.setId, phase: 'encoding' })
-      .last(1)
-      .values()[0];
-
-    if (enc && enc.derivedGroundTruth) {
-      groundTruth = enc.derivedGroundTruth;
-      GroundTruthBySet[set.setId] = groundTruth;
-    }
-  }
-}
-
+      function MatchingRetrievalTrial(set) {
+        let groundTruth = GroundTruthBySet[set.setId];
+        if (!groundTruth) {
+          const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
+          if (enc && enc.derivedGroundTruth) {
+            groundTruth = enc.derivedGroundTruth;
+            GroundTruthBySet[set.setId] = groundTruth;
+          } else {
+            groundTruth = Object.fromEntries(set.tops.map((t, i) => [t, set.bots[i]]));
+          }
+        }
 
         const shuffledTops = shuffle([...set.tops]);
         const shuffledBots = shuffle([...set.bots]);
@@ -530,7 +523,7 @@ function MatchingRetrievalTrial(set) {
             const last = jsPsych.data.get().last(1).values()[0];
             const slotToTop = last.slotToTop || [];
             const botsOrder = last.shuffledBots || set.bots.slice();
-            const gt = last.groundTruthUsed;
+            const gt = groundTruth;
 
             const markedSlots = botsOrder.map((botId, i) => {
               const topId = slotToTop[i];
