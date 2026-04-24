@@ -416,7 +416,7 @@ function MatchingRetrievalTrial(set) {
       groundTruth = enc.derivedGroundTruth;
       GroundTruthBySet[set.setId] = groundTruth;
     }
-
+  }
 }
 
 
@@ -530,7 +530,7 @@ function MatchingRetrievalTrial(set) {
             const last = jsPsych.data.get().last(1).values()[0];
             const slotToTop = last.slotToTop || [];
             const botsOrder = last.shuffledBots || set.bots.slice();
-            const gt = groundTruth;
+            const gt = last.groundTruthUsed;
 
             const markedSlots = botsOrder.map((botId, i) => {
               const topId = slotToTop[i];
@@ -566,7 +566,6 @@ function MatchingRetrievalTrial(set) {
         };
 
         return [retrieval, retrievalFeedback];
-}
       }
 
       function FillerWritingTask(promptText, tag) {
