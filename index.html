@@ -263,13 +263,14 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
               </div>
             `).join('');
 
-            const slots = bottomIds.map((_, i) => `
-              <div class="drop-slot" data-slot-index="${i}">Drop here</div>
-            `).join('');
+          const shuffledBottomIds = shuffle([...bottomIds]);
+const slots = shuffledBottomIds.map((_, i) => `
+  <div class="drop-slot" data-slot-index="${i}">Drop here</div>
+`).join('');
 
-            const bottoms = bottomIds.map(src => `
-              <div class="img-cell">${imgHTML(src)}</div>
-            `).join('');
+const bottoms = shuffledBottomIds.map(src => `
+  <div class="img-cell">${imgHTML(src)}</div>
+`).join('');
 
             return `
               <div>
@@ -303,11 +304,11 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
             });
 
             slots.forEach((slotEl, slotIndex) => {
-              slotEl.addEventListener('dragover', (e) => e.preventDefault());
-              slotEl.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const topId = e.dataTransfer.getData('text/topId');
-                if (!topId) return;
+    slotEl.addEventListener('dragover', (e) => e.preventDefault());
+    slotEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const topId = e.dataTransfer.getData('text/topId');
+    if (!topId) return;
 
                 const prevSlotIndex = slotToTop.findIndex(t => t === topId);
                 if (prevSlotIndex >= 0) {
@@ -325,8 +326,8 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
                 slotEl.classList.add('filled');
                 slotEl.innerHTML = `${imgHTML(topId)}`;
 
-                const bottomId = bottomIds[slotIndex];
-                selectionMap[topId] = bottomId;
+                const bottomId = shuffledBottomIds[slotIndex];  // Use shuffledBottomIds instead of bottomIds
+    selectionMap[topId] = bottomId;
 
                 updateOK();
               });
