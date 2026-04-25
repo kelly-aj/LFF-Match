@@ -219,22 +219,25 @@
       const GroundTruthBySet = {};
 
       function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-        const topsShuffled = shuffle([...topIds]);
-        const correctTops = topsShuffled.slice(0, 2);
-        const incorrectTops = topsShuffled.slice(2);
+  const topsShuffled = shuffle([...topIds]);
+  const correctTops = topsShuffled.slice(0, 2);
+  const incorrectTops = topsShuffled.slice(2);
 
-        const truth = {};
-        correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
+  const truth = {};
+  
+  // For CORRECT tops: use participant's selection
+  correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
 
-        incorrectTops.forEach(tid => {
-          const chosen = selectionMap[tid];
-          const remaining = bottomIds.filter(b => b !== chosen && !Object.values(truth).includes(b));
-          const pool = remaining.length > 0 ? remaining : bottomIds.filter(b => b !== chosen);
-          truth[tid] = jsPsych.randomization.sampleWithoutReplacement(pool, 1)[0];
-        });
+  // For INCORRECT tops: swap them with each other
+  if (incorrectTops.length === 2) {
+    const chosen1 = selectionMap[incorrectTops[0]];
+    const chosen2 = selectionMap[incorrectTops[1]];
+    truth[incorrectTops[0]] = chosen2;  // Swap to the other bottom
+    truth[incorrectTops[1]] = chosen1;  // Swap to the other bottom
+  }
 
-        return { groundTruth: truth, correctTops };
-      }
+  return { groundTruth: truth, correctTops };
+}
 
       function MatchingEncodingTrial(set) {
         const topIds = set.tops;
