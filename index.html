@@ -263,11 +263,11 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
               </div>
             `).join('');
 
-  const slots = bottomIds.map((_, i) => `
+  const slots = shuffledBottomIds.map((_, i) =>
   <div class="drop-slot" data-slot-index="${i}">Drop here</div>
 `).join('');
 
- const bottoms = bottomIds.map(src => `
+ const bottoms = shuffledBottomIds.map(src => `
   <div class="img-cell">${imgHTML(src)}</div>
 `).join('');
 
@@ -352,6 +352,9 @@ okBtn.addEventListener('click', () => {
     participantMapping: selectionMap,
     assignedCorrectTopIds: correctTops,
     assignedIncorrectTopIds: incorrectTops,
+    incorrectPairMap: Object.fromEntries(
+  incorrectTops.map(t => [t, selectionMap[t]])
+),    
     derivedGroundTruth: groundTruth,
     encoding_matches: encodingMatches
   });
@@ -424,6 +427,11 @@ function MatchingRetrievalTrial(set) {
   
   if (!groundTruth) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
+    if (enc && enc.incorrectPairMap) {
+  Object.entries(enc.incorrectPairMap).forEach(([top, bottom]) => {
+    groundTruth[top] = bottom;
+  });
+}
     if (enc && enc.derivedGroundTruth) {
       groundTruth = enc.derivedGroundTruth;
       storedCorrectTops = enc.assignedCorrectTopIds;
