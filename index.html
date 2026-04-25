@@ -554,9 +554,9 @@ function MatchingRetrievalTrial(set) {
           stimulus: () => {
             const last = jsPsych.data.get().last(1).values()[0];
             const slotToTop = last.slotToTop || [];
-            const botsOrder = last.shuffledBots || set.bots.slice();
+            const botsOrder = last.shuffledBots;
             const selectionMap = last.participantMapping || {};
-            const gt = last.groundTruthUsed || groundTruth;
+            const gt = last.groundTruthUsed;
 
             const markedSlots = botsOrder.map((botId, i) => {
               const topId = slotToTop[i];
