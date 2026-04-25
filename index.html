@@ -263,7 +263,7 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
               </div>
             `).join('');
 
-          const shuffledBottomIds = shuffle([...bottomIds]);
+          const shuffledBottomIds = shuffle([...BottomIds]);
 const slots = shuffledBottomIds.map((_, i) => `
   <div class="drop-slot" data-slot-index="${i}">Drop here</div>
 `).join('');
