@@ -218,28 +218,38 @@
       const preload_images = SETS.flatMap(s => [...s.tops, ...s.bots]);
       const GroundTruthBySet = {};
 
-      function deriveGroundTruth(topIds, bottomIds, selectionMap) {
-  const topsShuffled = shuffle([...topIds]);
-  const correctTops = topsShuffled.slice(0, 2);
-  const incorrectTops = topsShuffled.slice(2);
+      // Store which tops are correct for each set (so retrieval uses the same ones)
+const CorrectTopsBySet = {};
+
+function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = null) {
+  let correctTops, incorrectTops;
+  
+  if (forceCorrectTops) {
+    // Use the stored correct tops from encoding
+    correctTops = forceCorrectTops;
+    incorrectTops = topIds.filter(t => !correctTops.includes(t));
+  } else {
+    // First time: generate random correct/incorrect split
+    const topsShuffled = shuffle([...topIds]);
+    correctTops = topsShuffled.slice(0, 2);
+    incorrectTops = topsShuffled.slice(2);
+  }
 
   const truth = {};
   
-  // For CORRECT tops: use participant's selection as the "correct" answer
+  // For CORRECT tops: use participant's selection
   correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
 
   // For INCORRECT tops: swap them with each other
   if (incorrectTops.length === 2) {
     const chosen1 = selectionMap[incorrectTops[0]];
     const chosen2 = selectionMap[incorrectTops[1]];
-    // Swap: incorrect[0] gets what incorrect[1] chose, and vice versa
     truth[incorrectTops[0]] = chosen2;
     truth[incorrectTops[1]] = chosen1;
   }
 
   return { groundTruth: truth, correctTops, incorrectTops };
 }
-
       function MatchingEncodingTrial(set) {
         const topIds = set.tops;
         const bottomIds = set.bots;
@@ -321,29 +331,32 @@
                 updateOK();
               });
             });
+okBtn.addEventListener('click', () => {
+  if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-            okBtn.addEventListener('click', () => {
-              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+  
+  // STORE the correct tops for this set so retrieval uses the same ones
+  CorrectTopsBySet[set.setId] = correctTops;
+  GroundTruthBySet[set.setId] = groundTruth;
 
-              const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
-              GroundTruthBySet[set.setId] = groundTruth;
+  const encodingMatches = topIds.map(topId => ({
+    top_image: topId,
+    bottom_image: selectionMap[topId],
+    is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
+  }));
 
-              const encodingMatches = topIds.map(topId => ({
-                top_image: topId,
-                bottom_image: selectionMap[topId],
-                is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
-              }));
+  jsPsych.finishTrial({
+    setId: set.setId,
+    phase: 'encoding',
+    participantMapping: selectionMap,
+    assignedCorrectTopIds: correctTops,
+    assignedIncorrectTopIds: incorrectTops,
+    derivedGroundTruth: groundTruth,
+    encoding_matches: encodingMatches
+  });
+});
 
-              jsPsych.finishTrial({
-                setId: set.setId,
-                phase: 'encoding',
-                participantMapping: selectionMap,
-                assignedCorrectTopIds: correctTops,
-                assignedIncorrectTopIds: incorrectTops,
-                derivedGroundTruth: groundTruth,
-                encoding_matches: encodingMatches
-              });
-            });
           }
         };
 
@@ -405,24 +418,25 @@
 
         return [encoding, encodingFeedback, ...ratings];
       }
-
-     function MatchingRetrievalTrial(set) {
+function MatchingRetrievalTrial(set) {
   let groundTruth = GroundTruthBySet[set.setId];
-  let storedIncorrectTops = null;
+  let storedCorrectTops = CorrectTopsBySet[set.setId];
   
   if (!groundTruth) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
     if (enc && enc.derivedGroundTruth) {
       groundTruth = enc.derivedGroundTruth;
-      storedIncorrectTops = enc.assignedIncorrectTopIds;
+      storedCorrectTops = enc.assignedCorrectTopIds;
+      CorrectTopsBySet[set.setId] = storedCorrectTops;
       GroundTruthBySet[set.setId] = groundTruth;
     } else {
       groundTruth = Object.fromEntries(set.tops.map((t, i) => [t, set.bots[i]]));
+      storedCorrectTops = set.tops.slice(0, 2);
     }
   }
 
-        const shuffledTops = shuffle([...set.tops]);
-        const shuffledBots = shuffle([...set.bots]);
+  const shuffledTops = shuffle([...set.tops]);
+  const shuffledBots = shuffle([...set.bots]); 
 
         const retrieval = {
           type: jsPsychHtmlButtonResponse,
