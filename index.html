@@ -254,6 +254,7 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
         const topIds = set.tops;
         const bottomIds = set.bots;
         let shuffledBottomIds = shuffle([...bottomIds]);
+        const encodingBottomOrder = [...shuffledBottomIds];
         const encoding = {
           type: jsPsychHtmlButtonResponse,
           stimulus: () => {
@@ -347,17 +348,18 @@ okBtn.addEventListener('click', () => {
   }));
 
   jsPsych.finishTrial({
-    setId: set.setId,
-    phase: 'encoding',
-    participantMapping: selectionMap,
-    assignedCorrectTopIds: correctTops,
-    assignedIncorrectTopIds: incorrectTops,
-    incorrectPairMap: Object.fromEntries(
-  incorrectTops.map(t => [t, selectionMap[t]])
-),    
-    derivedGroundTruth: groundTruth,
-    encoding_matches: encodingMatches
-  });
+  setId: set.setId,
+  phase: 'encoding',
+  participantMapping: selectionMap,
+  assignedCorrectTopIds: correctTops,
+  assignedIncorrectTopIds: incorrectTops,
+  incorrectPairMap: Object.fromEntries(
+    incorrectTops.map(t => [t, selectionMap[t]])
+  ),    
+  derivedGroundTruth: groundTruth,
+  encoding_matches: encodingMatches,
+  encodingBottomOrder: encodingBottomOrder   // 👈 ADD THIS
+});
 });
 
           }
@@ -553,6 +555,8 @@ function MatchingRetrievalTrial(set) {
             const last = jsPsych.data.get().last(1).values()[0];
             const slotToTop = last.slotToTop || [];
             const botsOrder = last.shuffledBots || set.bots.slice();
+            const last = jsPsych.data.get().last(1).values()[0];
+            const selectionMap = last.participantMapping || {};
             const gt = groundTruth;
 
             const markedSlots = botsOrder.map((botId, i) => {
@@ -560,7 +564,8 @@ function MatchingRetrievalTrial(set) {
               if (!topId) {
                 return `<div class="drop-slot">Empty</div>`;
               }
-              const correct = gt[topId] === botId;
+              const chosenBottom = selectionMap[topId];
+              const correct = chosenBottom === botId;
               const cls = correct ? 'outline-correct' : 'outline-incorrect';
               const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
               return `
