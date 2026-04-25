@@ -323,28 +323,27 @@
             });
 
             okBtn.addEventListener('click', () => {
-  if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
-  GroundTruthBySet[set.setId] = groundTruth;
+              const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+              GroundTruthBySet[set.setId] = groundTruth;
 
-  // Move encodingMatches BEFORE finishTrial
-  const encodingMatches = topIds.map(topId => ({
-    top_image: topId,
-    bottom_image: selectionMap[topId],
-    is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
-  }));
+              const encodingMatches = topIds.map(topId => ({
+                top_image: topId,
+                bottom_image: selectionMap[topId],
+                is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
+              }));
 
-  jsPsych.finishTrial({
-    setId: set.setId,
-    phase: 'encoding',
-    participantMapping: selectionMap,
-    assignedCorrectTopIds: correctTops,
-    assignedIncorrectTopIds: incorrectTops,
-    derivedGroundTruth: groundTruth,
-    encoding_matches: encodingMatches
-  });
-});
+              jsPsych.finishTrial({
+                setId: set.setId,
+                phase: 'encoding',
+                participantMapping: selectionMap,
+                assignedCorrectTopIds: correctTops,
+                assignedIncorrectTopIds: incorrectTops,
+                derivedGroundTruth: groundTruth,
+                encoding_matches: encodingMatches
+              });
+            });
           }
         };
 
