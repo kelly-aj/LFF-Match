@@ -326,7 +326,7 @@ const slots = shuffledBottomIds.map((_, i) => `
                 slotEl.classList.add('filled');
                 slotEl.innerHTML = `${imgHTML(topId)}`;
 
-                const bottomId = shuffledBottomIds[slotIndex];  // Use shuffledBottomIds instead of bottomIds
+                const bottomId = encodingBottomOrder[slotIndex];  // Use shuffledBottomIds instead of bottomIds
     selectionMap[topId] = bottomId;
 
                 updateOK();
@@ -556,7 +556,7 @@ function MatchingRetrievalTrial(set) {
             const slotToTop = last.slotToTop || [];
             const botsOrder = last.shuffledBots || set.bots.slice();
             const selectionMap = last.participantMapping || {};
-            const gt = groundTruth;
+            const gt = last.groundTruthUsed || groundTruth;
 
             const markedSlots = botsOrder.map((botId, i) => {
               const topId = slotToTop[i];
