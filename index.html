@@ -225,18 +225,19 @@
 
   const truth = {};
   
-  // For CORRECT tops: use participant's selection
+  // For CORRECT tops: use participant's selection as the "correct" answer
   correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
 
   // For INCORRECT tops: swap them with each other
   if (incorrectTops.length === 2) {
     const chosen1 = selectionMap[incorrectTops[0]];
     const chosen2 = selectionMap[incorrectTops[1]];
-    truth[incorrectTops[0]] = chosen2;  // Swap to the other bottom
-    truth[incorrectTops[1]] = chosen1;  // Swap to the other bottom
+    // Swap: incorrect[0] gets what incorrect[1] chose, and vice versa
+    truth[incorrectTops[0]] = chosen2;
+    truth[incorrectTops[1]] = chosen1;
   }
 
-  return { groundTruth: truth, correctTops };
+  return { groundTruth: truth, correctTops, incorrectTops };
 }
 
       function MatchingEncodingTrial(set) {
@@ -324,7 +325,7 @@
             okBtn.addEventListener('click', () => {
               if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-              const { groundTruth, correctTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+              const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
               GroundTruthBySet[set.setId] = groundTruth;
 
               const encodingMatches = topIds.map(topId => ({
