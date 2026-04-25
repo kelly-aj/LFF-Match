@@ -253,7 +253,7 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
       function MatchingEncodingTrial(set) {
         const topIds = set.tops;
         const bottomIds = set.bots;
-        
+        let shuffledBottomIds = shuffle([...bottomIds]);
         const encoding = {
           type: jsPsychHtmlButtonResponse,
           stimulus: () => {
@@ -263,11 +263,11 @@ function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = n
               </div>
             `).join('');
 
-const slots = shuffledBottomIds.map((_, i) => `
+  const slots = bottomIds.map((_, i) => `
   <div class="drop-slot" data-slot-index="${i}">Drop here</div>
 `).join('');
 
-const bottoms = shuffledBottomIds.map(src => `
+ const bottoms = bottomIds.map(src => `
   <div class="img-cell">${imgHTML(src)}</div>
 `).join('');
 
@@ -285,7 +285,6 @@ const bottoms = shuffledBottomIds.map(src => `
           choices: [],
           response_ends_trial: false,
           on_load: () => {
-            const shuffledBottomIds = shuffle([...bottomIds]);
             const topCards = Array.from(document.querySelectorAll('.top-card'));
             const slots = Array.from(document.querySelectorAll('.drop-slot'));
             const okBtn = document.getElementById('ok-encode');
