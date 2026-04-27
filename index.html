@@ -225,18 +225,26 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
   let correctTops, incorrectTops;
   
   if (forceCorrectTops) {
+    // Use the stored correct tops from encoding
     correctTops = forceCorrectTops;
     incorrectTops = topIds.filter(t => !correctTops.includes(t));
   } else {
+    // First time: generate random correct/incorrect split
     const topsShuffled = shuffle([...topIds]);
     correctTops = topsShuffled.slice(0, 2);
     incorrectTops = topsShuffled.slice(2);
+    
+    // DEBUG: Log which ones are correct
+    console.log(`Set correct tops: ${correctTops}, incorrect: ${incorrectTops}`);
   }
 
   const truth = {};
   
   // For CORRECT tops: use participant's selection
-  correctTops.forEach(tid => truth[tid] = selectionMap[tid]);
+  correctTops.forEach(tid => {
+    truth[tid] = selectionMap[tid];
+    console.log(`CORRECT: ${tid} -> ${selectionMap[tid]}`);
+  });
 
   // For INCORRECT tops: swap them with each other
   if (incorrectTops.length === 2) {
@@ -244,6 +252,7 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
     const chosen2 = selectionMap[incorrectTops[1]];
     truth[incorrectTops[0]] = chosen2;
     truth[incorrectTops[1]] = chosen1;
+    console.log(`INCORRECT (swapped): ${incorrectTops[0]} -> ${chosen2}, ${incorrectTops[1]} -> ${chosen1}`);
   }
 
   return { groundTruth: truth, correctTops, incorrectTops };
