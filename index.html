@@ -445,7 +445,7 @@ function MatchingRetrievalTrial(set) {
   }
 
   const shuffledTops = shuffle([...set.tops]);
-  const shuffledBots = shuffle([...set.bots]); 
+  const shuffledBots = shuffle([...set.bots]);
 
   const retrieval = {
     type: jsPsychHtmlButtonResponse,
@@ -553,6 +553,12 @@ function MatchingRetrievalTrial(set) {
         if (!topId) {
           return `<div class="drop-slot">Empty</div>`;
         }
+        
+        if (!gt || !gt[topId]) {
+          console.error(`Missing ground truth for ${topId}. GT:`, gt);
+          return `<div class="drop-slot">Error</div>`;
+        }
+        
         const expectedBottom = gt[topId];
         const correct = expectedBottom === botId;
         
@@ -586,7 +592,7 @@ function MatchingRetrievalTrial(set) {
   };
 
   return [retrieval, retrievalFeedback];
-} 
+}
    
       function FillerWritingTask(promptText, tag) {
         return {
