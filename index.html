@@ -434,15 +434,13 @@ function MatchingEncodingTrial(set) {
             
 function MatchingRetrievalTrial(set) {
   let groundTruth = GroundTruthBySet[set.setId];
-  let storedCorrectTops = CorrectTopsBySet[set.setId];
   
-  if (!groundTruth || !storedCorrectTops) {
+  if (!groundTruth) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
     if (enc && enc.derivedGroundTruth) {
       groundTruth = enc.derivedGroundTruth;
-      storedCorrectTops = enc.assignedCorrectTopIds;
-      CorrectTopsBySet[set.setId] = storedCorrectTops;
       GroundTruthBySet[set.setId] = groundTruth;
+      console.log('Retrieved ground truth from encoding:', groundTruth);
     }
   }
 
@@ -528,21 +526,11 @@ function MatchingRetrievalTrial(set) {
       okBtn.addEventListener('click', () => {
         if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-        const perItem = shuffledTops.map(topId => {
-          const chosenBottom = selectionMap[topId] || null;
-          const trueBottom = groundTruth[topId] || null;
-          const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
-          return { topId, chosenBottom, trueBottom, accurate };
-        });
-        const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
-
         jsPsych.finishTrial({
           setId: set.setId,
           phase: 'retrieval',
           participantMapping: selectionMap,
           groundTruthUsed: groundTruth,
-          perItem,
-          totalCorrect,
           slotToTop,
           shuffledBots
         });
@@ -551,59 +539,55 @@ function MatchingRetrievalTrial(set) {
   };
 
   const retrievalFeedback = {
-  type: jsPsychHtmlButtonResponse,
-  stimulus: () => {
-    const last = jsPsych.data.get().last(1).values()[0];
-    const slotToTop = last.slotToTop || [];
-    const botsOrder = last.shuffledBots;
-    const selectionMap = last.participantMapping || {};
-    const gt = last.groundTruthUsed;
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const last = jsPsych.data.get().last(1).values()[0];
+      const slotToTop = last.slotToTop || [];
+      const botsOrder = last.shuffledBots;
+      const gt = last.groundTruthUsed;
 
-    console.log('=== RETRIEVAL FEEDBACK ===');
-    console.log('Ground Truth:', gt);
-    console.log('Selection Map:', selectionMap);
-    console.log('Bots Order:', botsOrder);
-    console.log('Slot to Top:', slotToTop);
+      console.log('Retrieval using ground truth:', gt);
 
-    const markedSlots = botsOrder.map((botId, i) => {
-      const topId = slotToTop[i];
-      if (!topId) {
-        return `<div class="drop-slot">Empty</div>`;
-      }
-      const expectedBottom = gt[topId];
-      const correct = expectedBottom === botId;
-      
-      console.log(`Position ${i}: Top=${topId}, Bot at position=${botId}, Expected=${expectedBottom}, Correct=${correct}`);
-      
-      const cls = correct ? 'outline-correct' : 'outline-incorrect';
-      const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+      const markedSlots = botsOrder.map((botId, i) => {
+        const topId = slotToTop[i];
+        if (!topId) {
+          return `<div class="drop-slot">Empty</div>`;
+        }
+        const expectedBottom = gt[topId];
+        const correct = expectedBottom === botId;
+        
+        console.log(`Position ${i}: Top=${topId}, Bot=${botId}, Expected=${expectedBottom}, Match=${correct}`);
+        
+        const cls = correct ? 'outline-correct' : 'outline-incorrect';
+        const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+        return `
+          <div class="drop-slot filled ${cls}" style="position:relative;">
+            ${badge}
+            ${imgHTML(topId)}
+          </div>
+        `;
+      }).join('');
+
+      const bottoms = botsOrder.map(src => `
+        <div class="img-cell">${imgHTML(src)}</div>
+      `).join('');
+
       return `
-        <div class="drop-slot filled ${cls}" style="position:relative;">
-          ${badge}
-          ${imgHTML(topId)}
+        <div>
+          <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
+          <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
+          <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
+          <div class="row-scroll"><div class="grid">${bottoms}</div></div>
         </div>
       `;
-    }).join('');
+    },
+    choices: ['OK'],
+    data: { setId: set.setId, phase: 'retrieval_feedback' }
+  };
 
-    const bottoms = botsOrder.map(src => `
-      <div class="img-cell">${imgHTML(src)}</div>
-    `).join('');
-
-    return `
-      <div>
-        <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
-        <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
-        <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
-        <div class="row-scroll"><div class="grid">${bottoms}</div></div>
-      </div>
-    `;
-  },
-  choices: ['OK'],
-  data: { setId: set.setId, phase: 'retrieval_feedback' }
-};
   return [retrieval, retrievalFeedback];
-}
-
+} 
+   
       function FillerWritingTask(promptText, tag) {
         return {
           type: jsPsychHtmlButtonResponse,
