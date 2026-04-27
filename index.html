@@ -378,22 +378,44 @@ okBtn.addEventListener('click', () => {
               `;
             }).join('');
 
-            const bottoms = set.bots.map(src => `
-              <div class="img-cell">${imgHTML(src)}</div>
-            `).join('');
+const encodingFeedback = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus: () => {
+    const last = jsPsych.data.get().last(1).values()[0];
+    const selectionMap = last.participantMapping;
+    const groundTruth = last.derivedGroundTruth;
+    const encodingBottomOrder = last.encodingBottomOrder;  // Get the shuffled order
 
-            return `
-              <div>
-                <h3 class="row-title">Feedback — ${set.setId}</h3>
-                <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-                <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
-                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
-              </div>
-            `;
-          },
-          choices: ['OK'],
-          data: { setId: set.setId, phase: 'encoding_feedback' }
-        };
+    const topRow = set.tops.map(src => {
+      const chosenBottom = selectionMap[src];
+      const isCorrect = groundTruth[src] === chosenBottom;
+      const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+      return `
+        <div class="top-card ${cls}">
+          ${badge}
+          ${imgHTML(src)}
+        </div>
+      `;
+    }).join('');
+
+    // Use the shuffled bottom order from encoding, not the original
+    const bottoms = encodingBottomOrder.map(src => `
+      <div class="img-cell">${imgHTML(src)}</div>
+    `).join('');
+
+    return `
+      <div>
+        <h3 class="row-title">Feedback — ${set.setId}</h3>
+        <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+        <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
+        <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+      </div>
+    `;
+  },
+  choices: ['OK'],
+  data: { setId: set.setId, phase: 'encoding_feedback' }
+};
 
         const ratings = set.tops.map(src => ({
           type: jsPsychHtmlSliderResponse,
