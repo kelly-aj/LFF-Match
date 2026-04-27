@@ -425,175 +425,167 @@ function MatchingEncodingTrial(set) {
             
 function MatchingRetrievalTrial(set) {
   let groundTruth = GroundTruthBySet[set.setId];
-  let storedCorrectTops = CorrectTopsBySet[set.setId];
   
   if (!groundTruth) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
-    if (enc && enc.incorrectPairMap) {
-  Object.entries(enc.incorrectPairMap).forEach(([top, bottom]) => {
-    groundTruth[top] = bottom;
-  });
-}
     if (enc && enc.derivedGroundTruth) {
       groundTruth = enc.derivedGroundTruth;
-      storedCorrectTops = enc.assignedCorrectTopIds;
-      CorrectTopsBySet[set.setId] = storedCorrectTops;
       GroundTruthBySet[set.setId] = groundTruth;
     } else {
       groundTruth = Object.fromEntries(set.tops.map((t, i) => [t, set.bots[i]]));
-      storedCorrectTops = set.tops.slice(0, 2);
     }
   }
 
   const shuffledTops = shuffle([...set.tops]);
   const shuffledBots = shuffle([...set.bots]); 
 
-        const retrieval = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: () => {
-            const topPool = shuffledTops.map(src => `
-              <div class="top-card" draggable="true" data-top="${src}">
-                ${imgHTML(src)}
-              </div>
-            `).join('');
+  const retrieval = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const topPool = shuffledTops.map(src => `
+        <div class="top-card" draggable="true" data-top="${src}">
+          ${imgHTML(src)}
+        </div>
+      `).join('');
 
-            const slots = shuffledBots.map((_, i) => `
-              <div class="drop-slot" data-slot-index="${i}">Drop here</div>
-            `).join('');
+      const slots = shuffledBots.map((_, i) => `
+        <div class="drop-slot" data-slot-index="${i}">Drop here</div>
+      `).join('');
 
-            const bottoms = shuffledBots.map(src => `
-              <div class="img-cell">${imgHTML(src)}</div>
-            `).join('');
+      const bottoms = shuffledBots.map(src => `
+        <div class="img-cell">${imgHTML(src)}</div>
+      `).join('');
 
-            return `
-              <div>
-                <h3 class="row-title">Retrieval — ${set.setId}</h3>
-                <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-                <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
-                <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
-                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
-                <div class="ok-wrap"><button id="ok-retr" disabled>OK</button></div>
-              </div>
-            `;
-          },
-          choices: [],
-          response_ends_trial: false,
-          on_load: () => {
-            const topCards = Array.from(document.querySelectorAll('.top-card'));
-            const slots = Array.from(document.querySelectorAll('.drop-slot'));
-            const okBtn = document.getElementById('ok-retr');
+      return `
+        <div>
+          <h3 class="row-title">Retrieval — ${set.setId}</h3>
+          <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
+          <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
+          <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
+          <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+          <div class="ok-wrap"><button id="ok-retr" disabled>OK</button></div>
+        </div>
+      `;
+    },
+    choices: [],
+    response_ends_trial: false,
+    on_load: () => {
+      const topCards = Array.from(document.querySelectorAll('.top-card'));
+      const slots = Array.from(document.querySelectorAll('.drop-slot'));
+      const okBtn = document.getElementById('ok-retr');
 
-            const slotToTop = new Array(slots.length).fill(null);
-            const selectionMap = {};
+      const slotToTop = new Array(slots.length).fill(null);
+      const selectionMap = {};
 
-            function updateOK() { okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length; }
+      function updateOK() { okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length; }
 
-            topCards.forEach(card => {
-              card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
-              });
-            });
+      topCards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
+        });
+      });
 
-            slots.forEach((slotEl, slotIndex) => {
-              slotEl.addEventListener('dragover', (e) => e.preventDefault());
-              slotEl.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const topId = e.dataTransfer.getData('text/topId');
-                if (!topId) return;
+      slots.forEach((slotEl, slotIndex) => {
+        slotEl.addEventListener('dragover', (e) => e.preventDefault());
+        slotEl.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const topId = e.dataTransfer.getData('text/topId');
+          if (!topId) return;
 
-                const prevSlotIndex = slotToTop.findIndex(t => t === topId);
-                if (prevSlotIndex >= 0) {
-                  slotToTop[prevSlotIndex] = null;
-                  const prevSlot = slots[prevSlotIndex];
-                  prevSlot.classList.remove('filled');
-                  prevSlot.textContent = 'Drop here';
-                }
-
-                if (slotToTop[slotIndex] !== null) {
-                  slotToTop[slotIndex] = null;
-                }
-
-                slotToTop[slotIndex] = topId;
-                slotEl.classList.add('filled');
-                slotEl.innerHTML = `${imgHTML(topId)}`;
-
-                const bottomId = shuffledBots[slotIndex];
-                selectionMap[topId] = bottomId;
-
-                updateOK();
-              });
-            });
-
-            okBtn.addEventListener('click', () => {
-              if (slotToTop.filter(x => x !== null).length !== slots.length) return;
-
-              const perItem = shuffledTops.map(topId => {
-                const chosenBottom = selectionMap[topId] || null;
-                const trueBottom = groundTruth[topId] || null;
-                const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
-                return { topId, chosenBottom, trueBottom, accurate };
-              });
-              const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
-
-              jsPsych.finishTrial({
-                setId: set.setId,
-                phase: 'retrieval',
-                participantMapping: selectionMap,
-                groundTruthUsed: groundTruth,
-                perItem,
-                totalCorrect,
-                slotToTop,
-                shuffledBots
-              });
-            });
+          const prevSlotIndex = slotToTop.findIndex(t => t === topId);
+          if (prevSlotIndex >= 0) {
+            slotToTop[prevSlotIndex] = null;
+            const prevSlot = slots[prevSlotIndex];
+            prevSlot.classList.remove('filled');
+            prevSlot.textContent = 'Drop here';
           }
-        };
 
-        const retrievalFeedback = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: () => {
-            const last = jsPsych.data.get().last(1).values()[0];
-            const slotToTop = last.slotToTop || [];
-            const botsOrder = last.shuffledBots;
-            const selectionMap = last.participantMapping || {};
-            const gt = last.groundTruthUsed;
+          if (slotToTop[slotIndex] !== null) {
+            slotToTop[slotIndex] = null;
+          }
 
-            const markedSlots = botsOrder.map((botId, i) => {
-              const topId = slotToTop[i];
-              if (!topId) {
-                return `<div class="drop-slot">Empty</div>`;
-              }
-              const chosenBottom = selectionMap[topId];
-              const correct = chosenBottom === botId;
-              const cls = correct ? 'outline-correct' : 'outline-incorrect';
-              const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-              return `
-                <div class="drop-slot filled ${cls}" style="position:relative;">
-                  ${badge}
-                  ${imgHTML(topId)}
-                </div>
-              `;
-            }).join('');
+          slotToTop[slotIndex] = topId;
+          slotEl.classList.add('filled');
+          slotEl.innerHTML = `${imgHTML(topId)}`;
 
-            const bottoms = botsOrder.map(src => `
-              <div class="img-cell">${imgHTML(src)}</div>
-            `).join('');
+          const bottomId = shuffledBots[slotIndex];
+          selectionMap[topId] = bottomId;
 
-            return `
-              <div>
-                <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
-                <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
-                <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
-                <div class="row-scroll"><div class="grid">${bottoms}</div></div>
-              </div>
-            `;
-          },
-          choices: ['OK'],
-          data: { setId: set.setId, phase: 'retrieval_feedback' }
-        };
+          updateOK();
+        });
+      });
 
-        return [retrieval, retrievalFeedback];
-      }
+      okBtn.addEventListener('click', () => {
+        if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+
+        const perItem = shuffledTops.map(topId => {
+          const chosenBottom = selectionMap[topId] || null;
+          const trueBottom = groundTruth[topId] || null;
+          const accurate = (chosenBottom && trueBottom && (chosenBottom === trueBottom)) ? 1 : 0;
+          return { topId, chosenBottom, trueBottom, accurate };
+        });
+        const totalCorrect = perItem.reduce((a, b) => a + b.accurate, 0);
+
+        jsPsych.finishTrial({
+          setId: set.setId,
+          phase: 'retrieval',
+          participantMapping: selectionMap,
+          groundTruthUsed: groundTruth,
+          perItem,
+          totalCorrect,
+          slotToTop,
+          shuffledBots
+        });
+      });
+    }
+  };
+
+  const retrievalFeedback = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const last = jsPsych.data.get().last(1).values()[0];
+      const slotToTop = last.slotToTop || [];
+      const botsOrder = last.shuffledBots;
+      const selectionMap = last.participantMapping || {};
+      const gt = last.groundTruthUsed;
+
+      const markedSlots = botsOrder.map((botId, i) => {
+        const topId = slotToTop[i];
+        if (!topId) {
+          return `<div class="drop-slot">Empty</div>`;
+        }
+        // Check if the top's ground truth matches the bottom at this position
+        const expectedBottom = gt[topId];
+        const correct = expectedBottom === botId;
+        const cls = correct ? 'outline-correct' : 'outline-incorrect';
+        const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+        return `
+          <div class="drop-slot filled ${cls}" style="position:relative;">
+            ${badge}
+            ${imgHTML(topId)}
+          </div>
+        `;
+      }).join('');
+
+      const bottoms = botsOrder.map(src => `
+        <div class="img-cell">${imgHTML(src)}</div>
+      `).join('');
+
+      return `
+        <div>
+          <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
+          <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
+          <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
+          <div class="row-scroll"><div class="grid">${bottoms}</div></div>
+        </div>
+      `;
+    },
+    choices: ['OK'],
+    data: { setId: set.setId, phase: 'retrieval_feedback' }
+  };
+
+  return [retrieval, retrievalFeedback];
+}
 
       function FillerWritingTask(promptText, tag) {
         return {
