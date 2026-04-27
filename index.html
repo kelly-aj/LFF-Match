@@ -248,116 +248,121 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
 
   return { groundTruth: truth, correctTops, incorrectTops };
 }
-      function MatchingEncodingTrial(set) {
-        const topIds = set.tops;
-        const bottomIds = set.bots;
-        let shuffledBottomIds = shuffle([...bottomIds]);
-        const encodingBottomOrder = [...shuffledBottomIds];
-        const encoding = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: () => {
-            const topPool = topIds.map(src => `
-              <div class="top-card" draggable="true" data-top="${src}">
-                ${imgHTML(src)}
-              </div>
-            `).join('');
+     function MatchingEncodingTrial(set) {
+  const topIds = set.tops;
+  const bottomIds = set.bots;
+  let shuffledBottomIds = null;
 
-const slots = shuffledBottomIds.map((_, i) => `
-  <div class="drop-slot" data-slot-index="${i}">Drop here</div>
-`).join('');
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      if (!shuffledBottomIds) {
+        shuffledBottomIds = shuffle([...bottomIds]);
+      }
+      
+      const topPool = topIds.map(src => `
+        <div class="top-card" draggable="true" data-top="${src}">
+          ${imgHTML(src)}
+        </div>
+      `).join('');
 
- const bottoms = shuffledBottomIds.map(src => `
-  <div class="img-cell">${imgHTML(src)}</div>
-`).join('');
+      const slots = shuffledBottomIds.map((_, i) => `
+        <div class="drop-slot" data-slot-index="${i}">Drop here</div>
+      `).join('');
 
-            return `
-              <div>
-                <h3 class="row-title">Match Encoding — ${set.setId}</h3>
-                <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
-                <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
-                <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
-                <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
-                <div class="ok-wrap"><button id="ok-encode" disabled>OK</button></div>
-              </div>
-            `;
-          },
-          choices: [],
-          response_ends_trial: false,
-          on_load: () => {
-            const topCards = Array.from(document.querySelectorAll('.top-card'));
-            const slots = Array.from(document.querySelectorAll('.drop-slot'));
-            const okBtn = document.getElementById('ok-encode');
+      const bottoms = shuffledBottomIds.map(src => `
+        <div class="img-cell">${imgHTML(src)}</div>
+      `).join('');
 
-            const slotToTop = new Array(slots.length).fill(null);
-            const selectionMap = {};
+      return `
+        <div>
+          <h3 class="row-title">Match Encoding — ${set.setId}</h3>
+          <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
+          <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
+          <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
+          <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+          <div class="ok-wrap"><button id="ok-encode" disabled>OK</button></div>
+        </div>
+      `;
+    },
+    choices: [],
+    response_ends_trial: false,
+    on_load: () => {
+      const topCards = Array.from(document.querySelectorAll('.top-card'));
+      const slots = Array.from(document.querySelectorAll('.drop-slot'));
+      const okBtn = document.getElementById('ok-encode');
 
-            function updateOK() {
-              okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length;
-            }
+      const slotToTop = new Array(slots.length).fill(null);
+      const selectionMap = {};
 
-            topCards.forEach(card => {
-              card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
-              });
-            });
+      function updateOK() {
+        okBtn.disabled = slotToTop.filter(x => x !== null).length !== slots.length;
+      }
 
-            slots.forEach((slotEl, slotIndex) => {
-    slotEl.addEventListener('dragover', (e) => e.preventDefault());
-    slotEl.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const topId = e.dataTransfer.getData('text/topId');
-    if (!topId) return;
+      topCards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/topId', card.getAttribute('data-top'));
+        });
+      });
 
-                const prevSlotIndex = slotToTop.findIndex(t => t === topId);
-                if (prevSlotIndex >= 0) {
-                  slotToTop[prevSlotIndex] = null;
-                  const prevSlot = slots[prevSlotIndex];
-                  prevSlot.classList.remove('filled');
-                  prevSlot.textContent = 'Drop here';
-                }
+      slots.forEach((slotEl, slotIndex) => {
+        slotEl.addEventListener('dragover', (e) => e.preventDefault());
+        slotEl.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const topId = e.dataTransfer.getData('text/topId');
+          if (!topId) return;
 
-                if (slotToTop[slotIndex] !== null) {
-                  slotToTop[slotIndex] = null;
-                }
-
-                slotToTop[slotIndex] = topId;
-                slotEl.classList.add('filled');
-                slotEl.innerHTML = `${imgHTML(topId)}`;
-
-                const bottomId = encodingBottomOrder[slotIndex];  // Use shuffledBottomIds instead of bottomIds
-    selectionMap[topId] = bottomId;
-
-                updateOK();
-              });
-            });
-okBtn.addEventListener('click', () => {
-  if (slotToTop.filter(x => x !== null).length !== slots.length) return;
-
-  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, encodingBottomOrder, selectionMap);
-  
-  CorrectTopsBySet[set.setId] = correctTops;
-  GroundTruthBySet[set.setId] = groundTruth;
-
-  const encodingMatches = topIds.map(topId => ({
-    top_image: topId,
-    bottom_image: selectionMap[topId],
-    is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
-  }));
-
-  jsPsych.finishTrial({
-    setId: set.setId,
-    phase: 'encoding',
-    participantMapping: selectionMap,
-    assignedCorrectTopIds: correctTops,
-    assignedIncorrectTopIds: incorrectTops,
-    derivedGroundTruth: groundTruth,
-    encoding_matches: encodingMatches,
-    encodingBottomOrder: encodingBottomOrder
-  });
-});
+          const prevSlotIndex = slotToTop.findIndex(t => t === topId);
+          if (prevSlotIndex >= 0) {
+            slotToTop[prevSlotIndex] = null;
+            const prevSlot = slots[prevSlotIndex];
+            prevSlot.classList.remove('filled');
+            prevSlot.textContent = 'Drop here';
           }
-        };
 
+          if (slotToTop[slotIndex] !== null) {
+            slotToTop[slotIndex] = null;
+          }
+
+          slotToTop[slotIndex] = topId;
+          slotEl.classList.add('filled');
+          slotEl.innerHTML = `${imgHTML(topId)}`;
+
+          const bottomId = shuffledBottomIds[slotIndex];
+          selectionMap[topId] = bottomId;
+
+          updateOK();
+        });
+      });
+
+      okBtn.addEventListener('click', () => {
+        if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+
+        const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, shuffledBottomIds, selectionMap);
+        
+        CorrectTopsBySet[set.setId] = correctTops;
+        GroundTruthBySet[set.setId] = groundTruth;
+
+        const encodingMatches = topIds.map(topId => ({
+          top_image: topId,
+          bottom_image: selectionMap[topId],
+          is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
+        }));
+
+        jsPsych.finishTrial({
+          setId: set.setId,
+          phase: 'encoding',
+          participantMapping: selectionMap,
+          assignedCorrectTopIds: correctTops,
+          assignedIncorrectTopIds: incorrectTops,
+          derivedGroundTruth: groundTruth,
+          encoding_matches: encodingMatches,
+          encodingBottomOrder: shuffledBottomIds
+        });
+      });
+    }
+  };
+}
         const encodingFeedback = {
           type: jsPsychHtmlButtonResponse,
           stimulus: () => {
