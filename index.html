@@ -248,12 +248,12 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
 
   return { groundTruth: truth, correctTops, incorrectTops };
 }
-     function MatchingEncodingTrial(set) {
+function MatchingEncodingTrial(set) {
   const topIds = set.tops;
   const bottomIds = set.bots;
   let shuffledBottomIds = null;
 
-  return {
+  const encoding = {
     type: jsPsychHtmlButtonResponse,
     stimulus: () => {
       if (!shuffledBottomIds) {
@@ -362,87 +362,66 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
       });
     }
   };
-}
-        const encodingFeedback = {
-          type: jsPsychHtmlButtonResponse,
-          stimulus: () => {
-            const last = jsPsych.data.get().last(1).values()[0];
-            const selectionMap = last.participantMapping;
-            const groundTruth = last.derivedGroundTruth;
 
-            const topRow = set.tops.map(src => {
-              const chosenBottom = selectionMap[src];
-              const isCorrect = groundTruth[src] === chosenBottom;
-              const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-              const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-              return `
-                <div class="top-card ${cls}">
-                  ${badge}
-                  ${imgHTML(src)}
-                </div>
-              `;
-            }).join('');
+  const encodingFeedback = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const last = jsPsych.data.get().last(1).values()[0];
+      const selectionMap = last.participantMapping;
+      const groundTruth = last.derivedGroundTruth;
+      const encodingBottomOrder = last.encodingBottomOrder;
 
-const encodingFeedback = {
-  type: jsPsychHtmlButtonResponse,
-  stimulus: () => {
-    const last = jsPsych.data.get().last(1).values()[0];
-    const selectionMap = last.participantMapping;
-    const groundTruth = last.derivedGroundTruth;
-    const encodingBottomOrder = last.encodingBottomOrder;  // Get the shuffled order
+      const topRow = set.tops.map(src => {
+        const chosenBottom = selectionMap[src];
+        const isCorrect = groundTruth[src] === chosenBottom;
+        const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+        const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+        return `
+          <div class="top-card ${cls}">
+            ${badge}
+            ${imgHTML(src)}
+          </div>
+        `;
+      }).join('');
 
-    const topRow = set.tops.map(src => {
-      const chosenBottom = selectionMap[src];
-      const isCorrect = groundTruth[src] === chosenBottom;
-      const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+      const bottoms = encodingBottomOrder.map(src => `
+        <div class="img-cell">${imgHTML(src)}</div>
+      `).join('');
+
       return `
-        <div class="top-card ${cls}">
-          ${badge}
-          ${imgHTML(src)}
+        <div>
+          <h3 class="row-title">Feedback — ${set.setId}</h3>
+          <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+          <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
+          <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
         </div>
       `;
-    }).join('');
+    },
+    choices: ['OK'],
+    data: { setId: set.setId, phase: 'encoding_feedback' }
+  };
 
-    // Use the shuffled bottom order from encoding, not the original
-    const bottoms = encodingBottomOrder.map(src => `
-      <div class="img-cell">${imgHTML(src)}</div>
-    `).join('');
-
-    return `
-      <div>
-        <h3 class="row-title">Feedback — ${set.setId}</h3>
-        <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-        <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
-        <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+  const ratings = set.tops.map(src => ({
+    type: jsPsychHtmlSliderResponse,
+    stimulus: `
+      <div style="text-align:center">
+        ${imgHTML(src, 'rating-img')}
       </div>
-    `;
-  },
-  choices: ['OK'],
-  data: { setId: set.setId, phase: 'encoding_feedback' }
-};
+      <p style="text-align:center;margin-top:12px">
+        How confident are you that you will be able to remember the correct match for this image on a future memory test?
+      </p>
+    `,
+    labels: ['0', '50', '100'],
+    min: 0, max: 100, step: 1,
+    slider_start: 50,
+    require_movement: false,
+    prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
+    button_label: 'Continue',
+    data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
+  }));
 
-        const ratings = set.tops.map(src => ({
-          type: jsPsychHtmlSliderResponse,
-          stimulus: `
-            <div style="text-align:center">
-              ${imgHTML(src, 'rating-img')}
-            </div>
-            <p style="text-align:center;margin-top:12px">
-              How confident are you that you will be able to remember the correct match for this image on a future memory test?
-            </p>
-          `,
-          labels: ['0', '50', '100'],
-          min: 0, max: 100, step: 1,
-          slider_start: 50,
-          require_movement: false,
-          prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
-          button_label: 'Continue',
-          data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
-        }));
-
-        return [encoding, encodingFeedback, ...ratings];
-      }
+  return [encoding, encodingFeedback, ...ratings];
+}
             
 function MatchingRetrievalTrial(set) {
   let groundTruth = GroundTruthBySet[set.setId];
