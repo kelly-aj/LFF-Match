@@ -221,15 +221,13 @@
       // Store which tops are correct for each set (so retrieval uses the same ones)
 const CorrectTopsBySet = {};
 
-function deriveGroundTruth(topIds, bottomIds, selectionMap, forceCorrectTops = null) {
+function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrectTops = null) {
   let correctTops, incorrectTops;
   
   if (forceCorrectTops) {
-    // Use the stored correct tops from encoding
     correctTops = forceCorrectTops;
     incorrectTops = topIds.filter(t => !correctTops.includes(t));
   } else {
-    // First time: generate random correct/incorrect split
     const topsShuffled = shuffle([...topIds]);
     correctTops = topsShuffled.slice(0, 2);
     incorrectTops = topsShuffled.slice(2);
@@ -335,9 +333,8 @@ const slots = shuffledBottomIds.map((_, i) => `
 okBtn.addEventListener('click', () => {
   if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, bottomIds, selectionMap);
+  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, encodingBottomOrder, selectionMap);
   
-  // STORE the correct tops for this set so retrieval uses the same ones
   CorrectTopsBySet[set.setId] = correctTops;
   GroundTruthBySet[set.setId] = groundTruth;
 
@@ -348,20 +345,16 @@ okBtn.addEventListener('click', () => {
   }));
 
   jsPsych.finishTrial({
-  setId: set.setId,
-  phase: 'encoding',
-  participantMapping: selectionMap,
-  assignedCorrectTopIds: correctTops,
-  assignedIncorrectTopIds: incorrectTops,
-  incorrectPairMap: Object.fromEntries(
-    incorrectTops.map(t => [t, selectionMap[t]])
-  ),    
-  derivedGroundTruth: groundTruth,
-  encoding_matches: encodingMatches,
-  encodingBottomOrder: encodingBottomOrder   // 👈 ADD THIS
+    setId: set.setId,
+    phase: 'encoding',
+    participantMapping: selectionMap,
+    assignedCorrectTopIds: correctTops,
+    assignedIncorrectTopIds: incorrectTops,
+    derivedGroundTruth: groundTruth,
+    encoding_matches: encodingMatches,
+    encodingBottomOrder: encodingBottomOrder
+  });
 });
-});
-
           }
         };
 
