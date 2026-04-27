@@ -345,30 +345,30 @@ function MatchingEncodingTrial(set) {
       });
 
       okBtn.addEventListener('click', () => {
-        if (slotToTop.filter(x => x !== null).length !== slots.length) return;
+  if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
-        const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, shuffledBottomIds, selectionMap);
-        
-        CorrectTopsBySet[set.setId] = correctTops;
-        GroundTruthBySet[set.setId] = groundTruth;
+  const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, shuffledBottomIds, selectionMap);
+  
+  CorrectTopsBySet[set.setId] = correctTops;  // STORE THE CORRECT TOPS
+  GroundTruthBySet[set.setId] = groundTruth;
 
-        const encodingMatches = topIds.map(topId => ({
-          top_image: topId,
-          bottom_image: selectionMap[topId],
-          is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
-        }));
+  const encodingMatches = topIds.map(topId => ({
+    top_image: topId,
+    bottom_image: selectionMap[topId],
+    is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
+  }));
 
-        jsPsych.finishTrial({
-          setId: set.setId,
-          phase: 'encoding',
-          participantMapping: selectionMap,
-          assignedCorrectTopIds: correctTops,
-          assignedIncorrectTopIds: incorrectTops,
-          derivedGroundTruth: groundTruth,
-          encoding_matches: encodingMatches,
-          encodingBottomOrder: shuffledBottomIds
-        });
-      });
+  jsPsych.finishTrial({
+    setId: set.setId,
+    phase: 'encoding',
+    participantMapping: selectionMap,
+    assignedCorrectTopIds: correctTops,  // ADD THIS
+    assignedIncorrectTopIds: incorrectTops,  // ADD THIS
+    derivedGroundTruth: groundTruth,
+    encoding_matches: encodingMatches,
+    encodingBottomOrder: shuffledBottomIds
+  });
+});
     }
   };
 
@@ -434,14 +434,15 @@ function MatchingEncodingTrial(set) {
             
 function MatchingRetrievalTrial(set) {
   let groundTruth = GroundTruthBySet[set.setId];
+  let storedCorrectTops = CorrectTopsBySet[set.setId];
   
-  if (!groundTruth) {
+  if (!groundTruth || !storedCorrectTops) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
     if (enc && enc.derivedGroundTruth) {
       groundTruth = enc.derivedGroundTruth;
+      storedCorrectTops = enc.assignedCorrectTopIds;
+      CorrectTopsBySet[set.setId] = storedCorrectTops;
       GroundTruthBySet[set.setId] = groundTruth;
-    } else {
-      groundTruth = Object.fromEntries(set.tops.map((t, i) => [t, set.bots[i]]));
     }
   }
 
