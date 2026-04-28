@@ -444,6 +444,8 @@ function MatchingRetrievalTrial(set) {
     }
   }
 
+  console.log('Ground truth at start of retrieval trial:', groundTruth);
+
   const shuffledTops = shuffle([...set.tops]);
   const shuffledBots = shuffle([...set.bots]);
 
@@ -526,6 +528,8 @@ function MatchingRetrievalTrial(set) {
       okBtn.addEventListener('click', () => {
         if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
+        console.log('Finishing retrieval with groundTruth:', groundTruth);
+
         jsPsych.finishTrial({
           setId: set.setId,
           phase: 'retrieval',
@@ -546,7 +550,7 @@ function MatchingRetrievalTrial(set) {
       const botsOrder = last.shuffledBots;
       const gt = last.groundTruthUsed;
 
-      console.log('Retrieval using ground truth:', gt);
+      console.log('In feedback, gt =', gt);
 
       const markedSlots = botsOrder.map((botId, i) => {
         const topId = slotToTop[i];
