@@ -472,18 +472,26 @@ function MatchingRetrievalTrial(set) {
     choices: [],
     response_ends_trial: false,
     on_load: () => {
+      console.log('=== RETRIEVAL on_load starting for', set.setId);
+      console.log('GroundTruthBySet keys:', Object.keys(GroundTruthBySet));
+      console.log('GroundTruthBySet contents:', GroundTruthBySet);
+      
       // Fetch ground truth NOW (when trial runs, not when created)
       let groundTruth = GroundTruthBySet[set.setId];
+      console.log('Retrieved groundTruth from global:', groundTruth);
       
       if (!groundTruth) {
+        console.log('Ground truth not found in global, checking data...');
         const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
+        console.log('Found encoding trial:', enc);
         if (enc && enc.derivedGroundTruth) {
           groundTruth = enc.derivedGroundTruth;
           GroundTruthBySet[set.setId] = groundTruth;
+          console.log('Set groundTruth from encoding data');
         }
       }
 
-      console.log('RETRIEVAL on_load: groundTruth for', set.setId, '=', groundTruth);
+      console.log('FINAL groundTruth:', groundTruth);
 
       const topCards = Array.from(document.querySelectorAll('.top-card'));
       const slots = Array.from(document.querySelectorAll('.drop-slot'));
@@ -533,6 +541,8 @@ function MatchingRetrievalTrial(set) {
       okBtn.addEventListener('click', () => {
         if (slotToTop.filter(x => x !== null).length !== slots.length) return;
 
+        console.log('Finishing retrieval with groundTruth:', groundTruth);
+
         jsPsych.finishTrial({
           setId: set.setId,
           phase: 'retrieval',
@@ -552,6 +562,8 @@ function MatchingRetrievalTrial(set) {
       const slotToTop = last.slotToTop || [];
       const botsOrder = last.shuffledBots;
       const gt = last.groundTruthUsed;
+
+      console.log('Feedback: gt =', gt);
 
       const markedSlots = botsOrder.map((botId, i) => {
         const topId = slotToTop[i];
