@@ -349,8 +349,13 @@ function MatchingEncodingTrial(set) {
 
   const { groundTruth, correctTops, incorrectTops } = deriveGroundTruth(topIds, shuffledBottomIds, selectionMap);
   
-  CorrectTopsBySet[set.setId] = correctTops;  // STORE THE CORRECT TOPS
+  console.log('ENCODING: Storing for setId:', set.setId);
+  console.log('ENCODING: Ground truth:', groundTruth);
+  
+  CorrectTopsBySet[set.setId] = correctTops;
   GroundTruthBySet[set.setId] = groundTruth;
+  
+  console.log('ENCODING: Stored. GroundTruthBySet now:', GroundTruthBySet);
 
   const encodingMatches = topIds.map(topId => ({
     top_image: topId,
@@ -362,8 +367,8 @@ function MatchingEncodingTrial(set) {
     setId: set.setId,
     phase: 'encoding',
     participantMapping: selectionMap,
-    assignedCorrectTopIds: correctTops,  // ADD THIS
-    assignedIncorrectTopIds: incorrectTops,  // ADD THIS
+    assignedCorrectTopIds: correctTops,
+    assignedIncorrectTopIds: incorrectTops,
     derivedGroundTruth: groundTruth,
     encoding_matches: encodingMatches,
     encodingBottomOrder: shuffledBottomIds
@@ -433,7 +438,11 @@ function MatchingEncodingTrial(set) {
 }
             
 function MatchingRetrievalTrial(set) {
+  console.log('RETRIEVAL: Looking for setId:', set.setId);
+  console.log('RETRIEVAL: GroundTruthBySet contains:', GroundTruthBySet);
+  
   let groundTruth = GroundTruthBySet[set.setId];
+  console.log('RETRIEVAL: Retrieved from global:', groundTruth);
   
   if (!groundTruth) {
     const enc = jsPsych.data.get().filter({ setId: set.setId, phase: 'encoding' }).last(1).values()[0];
