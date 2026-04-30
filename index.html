@@ -197,20 +197,25 @@
         return `<img src="${src}" alt=""${cls}>`;
       }
 
-      const SETS = [
+      const SETS = [       
         { setId: 'Set1',
-          tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
-          bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
+        instruction: 'Please match the farmer to the crop that they grow',
+        tops: ['img/Set1Top1.png','img/Set1Top2.png','img/Set1Top3.png','img/Set1Top4.png'],
+        bots: ['img/Set1Bot1.png','img/Set1Bot2.png','img/Set1Bot3.png','img/Set1Bot4.png']
         },
+
         { setId: 'Set2',
+         instruction: 'Please match the dog to their correct doghouse',
           tops: ['img/Set2Top1.png','img/Set2Top2.png','img/Set2Top3.png','img/Set2Top4.png'],
           bots: ['img/Set2Bot1.png','img/Set2Bot2.png','img/Set2Bot3.png','img/Set2Bot4.png']
         },
         { setId: 'Set3',
+         instruction: 'Please match the car to its garage',
           tops: ['img/Set3Top1.png','img/Set3Top2.png','img/Set3Top3.png','img/Set3Top4.png'],
           bots: ['img/Set3Bot1.png','img/Set3Bot2.png','img/Set3Bot3.png','img/Set3Bot4.png']
         },
         { setId: 'Set4',
+         instruction: 'Please match the child with their favorite food',
           tops: ['img/Set4Top1.png','img/Set4Top2.png','img/Set4Top3.png','img/Set4Top4.png'],
           bots: ['img/Set4Bot1.png','img/Set4Bot2.png','img/Set4Bot3.png','img/Set4Bot4.png']
         }
@@ -285,7 +290,7 @@ function MatchingEncodingTrial(set) {
 
       return `
         <div>
-          <h3 class="row-title">Match Encoding — ${set.setId}</h3>
+          <h3 class="row-title">Match Encoding — ${set.instruction}</h3>
           <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
           <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
           <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
@@ -404,7 +409,7 @@ function MatchingEncodingTrial(set) {
 
       return `
         <div>
-          <h3 class="row-title">Feedback — ${set.setId}</h3>
+          <h3 class="row-title">Feedback — ${set.instruction}</h3>
           <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
           <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
           <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
@@ -460,7 +465,7 @@ function MatchingRetrievalTrial(set) {
 
       return `
         <div>
-          <h3 class="row-title">Retrieval — ${set.setId}</h3>
+          <h3 class="row-title">Retrieval — ${set.instruction}</h3>
           <p class="hint">Drag each top image into one of the empty squares above the bottom images. When all four are placed, click OK.</p>
           <div class="row-scroll"><div id="top-pool">${topPool}</div></div>
           <div class="row-scroll"><div class="grid" id="drop-row">${slots}</div></div>
@@ -590,7 +595,7 @@ function MatchingRetrievalTrial(set) {
 
       return `
         <div>
-          <h3 class="row-title">Retrieval Feedback — ${set.setId}</h3>
+          <h3 class="row-title">Retrieval Feedback — ${set.instruction}</h3>
           <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
           <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
           <div class="row-scroll"><div class="grid">${bottoms}</div></div>
