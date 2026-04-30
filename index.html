@@ -674,10 +674,31 @@ function MatchingRetrievalTrial(set) {
             <p>Are you ready to begin?</p>
             <p><strong>Press the space bar</strong> to start the first trial.</p>
           </div>
-        `,
+          `,
         choices: [' '],
         data: { phase: 'ready_to_begin' }
       };
+      
+      const attentionCheckNeutral = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div style="max-width:800px; margin:0 auto; text-align:center;">
+          <p>Please select <strong>Neither Agree nor Disagree</strong> for this question.</p>
+          </div>
+        `,
+        choices: [
+          'Strongly Disagree',           // 0
+          'Disagree',                    // 1
+          'Neither Agree nor Disagree',  // 2 ✅ correct
+          'Agree',                       // 3
+          'Strongly Agree'               // 4
+        ],
+        data: { phase: 'attention_check_neutral' },
+        on_finish: (data) => {
+        data.attention_response = data.response;
+        data.attention_correct = data.response === 2 ? 1 : 0;
+    }
+  };
       const attentionCheck = {
         type: jsPsychHtmlButtonResponse,
         stimulus: `
@@ -701,6 +722,18 @@ function MatchingRetrievalTrial(set) {
         }
       };
       
+      const beforeSecondEncodingInstructions = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+          <div style="text-align:center; max-width:800px; margin:0 auto;">
+            <p>Thanks! We are now going to show you two other sets that you will once again match.</p>
+            <p>As before, after you have matched all of the stimuli you will receive feedback. You should remember which pairs are correct and which ones are incorrect for a future matching test with these same items.</p>
+            <p><strong>Press the space bar</strong> to continue.</p>
+          </div>
+  `,
+  choices: [' '],
+  data: { phase: 'transition_before_second_encoding' }
+};
       const shortBreakAfterHalf1 = {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `
@@ -741,6 +774,9 @@ function MatchingRetrievalTrial(set) {
       timeline.push(...MatchingRetrievalTrial(half1[0]));
       timeline.push(...MatchingRetrievalTrial(half1[1]));
 
+      timeline.push(beforeSecondEncodingInstructions);
+      timeline.push(attentionCheckNeutral);
+      
       timeline.push(...MatchingEncodingTrial(half2[0]));
       timeline.push(...MatchingEncodingTrial(half2[1]));
       timeline.push(FillerWritingTask(
