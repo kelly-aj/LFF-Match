@@ -790,23 +790,114 @@ function MatchingRetrievalTrial(set) {
       const studyID = getQueryParam('STUDY_ID');
       const sessionID = getQueryParam('SESSION_ID');
 
-      const endScreen = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-          <div style="max-width:800px;margin:0 auto;text-align:left">
-            <h3>Thank you for your participation!</h3>
-            <p>Your responses have been recorded.</p>
-            <p><em>For local testing only:</em> you can download your data below.</p>
-          </div>
-        `,
-        choices: ['Download data (test only)', 'Finish'],
-        on_finish: (data) => {
-          if (data.response === 0) {
-            jsPsych.data.get().localSave('csv', 'lff_matching_data.csv');
-          }
-        },
-        data: { phase: 'end' }
-      };
+function countWords(text) {
+  if (!text) return 0;
+  return text.trim().split(/\s+/).length;
+}
+
+function calculateOverallAccuracy(itemReport) {
+  let totalItems = 0;
+  let correctItems = 0;
+  
+  Object.values(itemReport).forEach(setItems => {
+    setItems.forEach(item => {
+      totalItems++;
+      if (item.retrievalCorrect === 1) correctItems++;
+    });
+  });
+  
+  return totalItems > 0 ? (correctItems / totalItems) : null;
+}
+
+const endScreen = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div style="max-width:800px;margin:0 auto;text-align:left">
+      <h3>Thank you for your participation!</h3>
+      <p>You will now be redirected to complete a brief survey.</p>
+    </div>
+  `,
+  choices: [],
+  response_ends_trial: false,
+  on_load: () => {
+    const allData = jsPsych.data.get().values();
+    
+    // Build item report
+    const itemReport = {};
+    SETS.forEach(set => {
+      const setId = set.setId;
+      itemReport[setId] = [];
+      
+      const encodingTrial = allData.find(trial => trial.setId === setId && trial.phase === 'encoding');
+      const confidenceRatings = allData.filter(trial => trial.setId === setId && trial.phase === 'encoding_confidence');
+      const retrievalTrial = allData.find(trial => trial.setId === setId && trial.phase === 'retrieval');
+      
+      if (encodingTrial && retrievalTrial) {
+        const groundTruth = encodingTrial.derivedGroundTruth;
+        const encodingMatches = encodingTrial.encoding_matches;
+        const retrievalMatches = retrievalTrial.participantMapping;
+        
+        set.tops.forEach(topImage => {
+          const encodingMatch = encodingMatches.find(m => m.top_image === topImage);
+          const confidence = confidenceRatings.find(r => r.topImage === topImage)?.response || null;
+          const encodingCorrect = encodingMatch ? encodingMatch.is_correct : null;
+          const retrievalMatch = retrievalMatches[topImage];
+          const retrievalCorrect = groundTruth[topImage] === retrievalMatch ? 1 : 0;
+          
+          itemReport[setId].push({
+            topImage,
+            encodingCorrect,
+            confidenceRating: confidence,
+            retrievalCorrect
+          });
+        });
+      }
+    });
+    
+    // Get filler task data with word counts
+    const fillerTasks = allData.filter(trial => trial.phase === 'filler');
+    const fillerSummary = fillerTasks.map(task => ({
+      tag: task.fillerTag,
+      word_count: countWords(task.text),
+      text: task.text
+    }));
+    
+    // Get attention check results
+    const attentionChecks = allData.filter(trial => trial.phase === 'attention_check' || trial.phase === 'attention_check_neutral');
+    const attentionCorrect = attentionChecks.every(check => check.attention_correct === 1);
+    
+    // Combine all data
+    const summaryData = {
+      prolific_pid: prolificPID,
+      prolific_study_id: studyID,
+      prolific_session_id: sessionID,
+      timestamp_start: jsPsych.data.get().values()[0].timestamp || new Date().toISOString(),
+      timestamp_end: new Date().toISOString(),
+      item_report: itemReport,
+      filler_summary: fillerSummary,
+      attention_checks_passed: attentionCorrect,
+      overall_accuracy: calculateOverallAccuracy(itemReport)
+    };
+    
+    // Encode data for Qualtrics
+    const dataStr = JSON.stringify(summaryData);
+    const encodedData = encodeURIComponent(dataStr);
+    
+    // Qualtrics redirect URL with embedded data
+    const qualtricsSurveyID = 'SV_8eIO9NfNa89mXnU'; // e.g., 'SV_abc123xyz'
+    const qualtricsDatacenter = 'iad1'; // 
+    const prolificCompletionCode = getQueryParam('cc') || 'NO_CODE';
+    const redirectURL = encodeURIComponent(`https://app.prolific.co/submissions/complete?cc=${prolificCompletionCode}`);
+    
+    const qualticsURL = `https://${qualtricsDatacenter}.qualtrics.com/jfe/form/${qualtricsSurveyID}?study_data=${encodedData}&redirect_url=${redirectURL}&PROLIFIC_PID=${prolificPID}`;
+    
+    // Redirect after a short delay
+    setTimeout(() => {
+      window.location.href = qualticsURL;
+    }, 1000);
+  },
+  data: { phase: 'end' }
+};
       timeline.push(endScreen);
 
       jsPsych.data.addProperties({
