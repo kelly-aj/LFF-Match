@@ -879,17 +879,26 @@ const endScreen = {
       overall_accuracy: calculateOverallAccuracy(itemReport)
     };
     
-    // Encode data for Qualtrics
-    const dataStr = JSON.stringify(summaryData);
-    const encodedData = encodeURIComponent(dataStr);
-    
-    // Qualtrics redirect URL with embedded data
-    const qualtricsSurveyID = 'SV_8eIO9NfNa89mXnU'; // e.g., 'SV_abc123xyz'
-    const qualtricsDatacenter = 'iad1'; // 
-    const prolificCompletionCode = getQueryParam('cc') || 'NO_CODE';
-    const redirectURL = encodeURIComponent(`https://app.prolific.co/submissions/complete?cc=${prolificCompletionCode}`);
-    
-    const qualticsURL = `https://${qualtricsDatacenter}.qualtrics.com/jfe/form/${qualtricsSurveyID}?study_data=${encodedData}&redirect_url=${redirectURL}&PROLIFIC_PID=${prolificPID}`;
+// Encode data for Qualtrics - pass as individual URL parameters
+const qualtricsSurveyID = 'SV_8eIO9NfNa89mXnU';
+const qualtricsDatacenter = 'iad1';
+const prolificCompletionCode = getQueryParam('cc') || 'NO_CODE';
+const redirectURL = `https://app.prolific.co/submissions/complete?cc=${prolificCompletionCode}`;
+
+// Convert data to URL parameters
+const itemReportStr = encodeURIComponent(JSON.stringify(summaryData.item_report));
+const fillerSummaryStr = encodeURIComponent(JSON.stringify(summaryData.filler_summary));
+const attentionChecksStr = encodeURIComponent(summaryData.attention_checks_passed ? 'true' : 'false');
+const overallAccuracyStr = encodeURIComponent(summaryData.overall_accuracy || '0');
+const redirectURLEncoded = encodeURIComponent(redirectURL);
+
+const qualticsURL = `https://${qualtricsDatacenter}.qualtrics.com/jfe/form/${qualtricsSurveyID}?` +
+  `item_report=${itemReportStr}&` +
+  `filler_summary=${fillerSummaryStr}&` +
+  `attention_checks_passed=${attentionChecksStr}&` +
+  `overall_accuracy=${overallAccuracyStr}&` +
+  `redirect_url=${redirectURLEncoded}&` +
+  `PROLIFIC_PID=${prolificPID}`;
     
     // Redirect after a short delay
     setTimeout(() => {
