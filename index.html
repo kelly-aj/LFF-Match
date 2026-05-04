@@ -265,16 +265,15 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
 function MatchingEncodingTrial(set) {
   const topIds = set.tops;
   const bottomIds = set.bots;
-  let shuffledBottomIds = null;
+  const shuffledBottomIds = shuffle([...bottomIds]);
 
+  const shuffledBottomIds = shuffle([...bottomIds]);
+  
   const encoding = {
     type: jsPsychHtmlButtonResponse,
     stimulus: () => {
-      if (!shuffledBottomIds) {
-        shuffledBottomIds = shuffle([...bottomIds]);
-      }
       
-      const topPool = topIds.map(src => `
+  const topPool = topIds.map(src => `
         <div class="top-card" draggable="true" data-top="${src}">
           ${imgHTML(src)}
         </div>
