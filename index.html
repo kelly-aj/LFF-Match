@@ -381,17 +381,11 @@ function MatchingEncodingTrial(set) {
     }
   };
 
-  const encodingFeedback = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: () => {
-      const last = jsPsych.data.get().last(1).values()[0];
-      const selectionMap = last.participantMapping;
-      const groundTruth = last.derivedGroundTruth;
-      const encodingBottomOrder = last.encodingBottomOrder;
+const last = jsPsych.data.get().last(1).values()[0];
 
-    const encodingMatches = last.encoding_matches;
+const encodingMatches = last.encoding_matches;
 
-// FORCE canonical ordering based on original set order
+// Force canonical order using original set order
 const orderedMatches = set.tops.map(topId =>
   encodingMatches.find(m => m.top_image === topId)
 );
