@@ -389,12 +389,15 @@ function MatchingEncodingTrial(set) {
       const groundTruth = last.derivedGroundTruth;
       const encodingBottomOrder = last.encodingBottomOrder;
 
-      const encodingMatches = last.encoding_matches;
+    onst encodingMatches = last.encoding_matches;
 
-// preserve encoding display order
-const topRow = encodingMatches.map(m => {
+// FORCE canonical ordering based on original set order
+const orderedMatches = set.tops.map(topId =>
+  encodingMatches.find(m => m.top_image === topId)
+);
+
+const topRow = orderedMatches.map(m => {
   const src = m.top_image;
-  const chosenBottom = m.bottom_image;
   const isCorrect = m.is_correct === 1;
 
   const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
