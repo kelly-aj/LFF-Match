@@ -368,6 +368,7 @@ function MatchingEncodingTrial(set) {
     is_correct: groundTruth[topId] === selectionMap[topId] ? 1 : 0
   }));
 
+  const encodingSlotOrder = [...slotToTop];
   jsPsych.finishTrial({
     setId: set.setId,
     phase: 'encoding',
@@ -376,7 +377,8 @@ function MatchingEncodingTrial(set) {
     assignedIncorrectTopIds: incorrectTops,
     derivedGroundTruth: groundTruth,
     encoding_matches: encodingMatches,
-    encodingBottomOrder: shuffledBottomIds
+    encodingBottomOrder: shuffledBottomIds,
+    encodingSlotOrder: encodingSlotOrder
   });
 });
     }
