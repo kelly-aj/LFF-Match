@@ -389,7 +389,27 @@ function MatchingEncodingTrial(set) {
       const groundTruth = last.derivedGroundTruth;
       const encodingBottomOrder = last.encodingBottomOrder;
 
-      const topRow = set.tops.map(src => {
+      const encodingMatches = last.encoding_matches;
+
+// preserve encoding display order
+const topRow = encodingMatches.map(m => {
+  const src = m.top_image;
+  const chosenBottom = m.bottom_image;
+  const isCorrect = m.is_correct === 1;
+
+  const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+  const badge = isCorrect
+    ? '<div class="badge correct">✓</div>'
+    : '<div class="badge incorrect">✗</div>';
+
+  return `
+    <div class="top-card ${cls}">
+      ${badge}
+      ${imgHTML(src)}
+    </div>
+  `;
+}).join('');
+      
         const chosenBottom = selectionMap[src];
         const isCorrect = groundTruth[src] === chosenBottom;
         const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
