@@ -225,7 +225,8 @@
 
       // Store which tops are correct for each set (so retrieval uses the same ones)
 const CorrectTopsBySet = {};
-
+const ShuffledTopsBySet = {};
+  
 function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrectTops = null) {
   let correctTops, incorrectTops;
   
@@ -373,6 +374,8 @@ function MatchingEncodingTrial(set) {
   }));
 
   const encodingSlotOrder = [...slotToTop];
+  ShuffledTopsBySet[set.setId] = shuffledTopIds;
+  
   jsPsych.finishTrial({
     setId: set.setId,
     phase: 'encoding',
@@ -432,24 +435,27 @@ const encodingFeedback = {
   data: { setId: set.setId, phase: 'encoding_feedback' }
 };
 
-  const ratings = shuffledTopIds.map(src => ({
-    type: jsPsychHtmlSliderResponse,
-    stimulus: `
-      <div style="text-align:center">
-        ${imgHTML(src, 'rating-img')}
-      </div>
-      <p style="text-align:center;margin-top:12px">
-        How confident are you that you will be able to remember the correct match for this image on a future memory test?
-      </p>
-    `,
-    labels: ['0', '50', '100'],
-    min: 0, max: 100, step: 1,
-    slider_start: 50,
-    require_movement: false,
-    prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
-    button_label: 'Continue',
-    data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
-  }));
+  const ratings = (() => {
+    const topsToUse = ShuffledTopsBySet[set.setId] || topIds;
+    return topsToUse.map(src => ({
+      type: jsPsychHtmlSliderResponse,
+      stimulus: `
+        <div style="text-align:center">
+          ${imgHTML(src, 'rating-img')}
+        </div>
+        <p style="text-align:center;margin-top:12px">
+          How confident are you that you will be able to remember the correct match for this image on a future memory test?
+        </p>
+      `,
+      labels: ['0', '50', '100'],
+      min: 0, max: 100, step: 1,
+      slider_start: 50,
+      require_movement: false,
+      prompt: '<p style="text-align:center">Use the slider (0–100), then click Continue.</p>',
+      button_label: 'Continue',
+      data: { setId: set.setId, phase: 'encoding_confidence', topImage: src }
+    }));
+  })();
 
   return [encoding, encodingFeedback, ...ratings];
 }
