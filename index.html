@@ -570,65 +570,68 @@ function MatchingRetrievalTrial(set) {
   };
 
   const retrievalFeedback = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: () => {
-      const last = jsPsych.data.get().last(1).values()[0];
-      const slotToTop = last.slotToTop || [];
-      const botsOrder = last.shuffledBots;
-      const topsOrder = last.shuffledTops;
-      const gt = last.groundTruthUsed;
+  type: jsPsychHtmlButtonResponse,
+  stimulus: () => {
+    const last = jsPsych.data.get().last(1).values()[0];
+    const slotToTop = last.slotToTop || [];
+    const botsOrder = last.shuffledBots;
+    const topsOrder = last.shuffledTops;
+    const gt = last.groundTruthUsed;
+    const participantMapping = last.participantMapping;
 
-      console.log('Feedback: gt =', gt);
+    console.log('Feedback: gt =', gt);
+    console.log('Feedback: participantMapping =', participantMapping);
 
-      const topRow = topsOrder.map(src => {
-        const chosenBottom = gt[src];
-        const isCorrect = chosenBottom !== null && chosenBottom !== undefined;
-        const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-        const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-        return `
-          <div class="top-card ${cls}">
-            ${badge}
-            ${imgHTML(src)}
-          </div>
-        `;
-      }).join('');
-
-      const markedSlots = botsOrder.map((botId, i) => {
-        const topId = slotToTop[i];
-        if (!topId) {
-          return `<div class="drop-slot">Empty</div>`;
-        }
-        
-        const expectedBottom = gt[topId];
-        const correct = expectedBottom === botId;
-        
-        const cls = correct ? 'outline-correct' : 'outline-incorrect';
-        const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-        return `
-          <div class="drop-slot filled ${cls}" style="position:relative;">
-            ${badge}
-            ${imgHTML(topId)}
-          </div>
-        `;
-      }).join('');
-
-      const bottoms = botsOrder.map(src => `
-        <div class="img-cell">${imgHTML(src)}</div>
-      `).join('');
-
+    const topRow = topsOrder.map(src => {
+      const chosenBottom = participantMapping[src];
+      const expectedBottom = gt[src];
+      const isCorrect = chosenBottom === expectedBottom;
+      const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
       return `
-        <div>
-          <h3 class="row-title">Retrieval Feedback — ${set.instruction}</h3>
-          <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
-          <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
-          <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
-          <div class="row-scroll"><div class="grid">${bottoms}</div></div>
+        <div class="top-card ${cls}">
+          ${badge}
+          ${imgHTML(src)}
         </div>
       `;
-    },
-    choices: ['OK'],
-    data: { setId: set.setId, phase: 'retrieval_feedback' }
-  };
+    }).join('');
+
+    const markedSlots = botsOrder.map((botId, i) => {
+      const topId = slotToTop[i];
+      if (!topId) {
+        return `<div class="drop-slot">Empty</div>`;
+      }
+      
+      const expectedBottom = gt[topId];
+      const correct = expectedBottom === botId;
+      
+      const cls = correct ? 'outline-correct' : 'outline-incorrect';
+      const badge = correct ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+      return `
+        <div class="drop-slot filled ${cls}" style="position:relative;">
+          ${badge}
+          ${imgHTML(topId)}
+        </div>
+      `;
+    }).join('');
+
+    const bottoms = botsOrder.map(src => `
+      <div class="img-cell">${imgHTML(src)}</div>
+    `).join('');
+
+    return `
+      <div>
+        <h3 class="row-title">Retrieval Feedback — ${set.instruction}</h3>
+        <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
+        <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
+        <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
+        <div class="row-scroll"><div class="grid">${bottoms}</div></div>
+      </div>
+    `;
+  },
+  choices: ['OK'],
+  data: { setId: set.setId, phase: 'retrieval_feedback' }
+};
 
   return [retrieval, retrievalFeedback];
 }
