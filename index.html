@@ -428,7 +428,7 @@ function MatchingEncodingTrial(set) {
     data: { setId: set.setId, phase: 'encoding_feedback' }
   };
 
-  const ratings = set.tops.map(src => ({
+  const ratings = shuffledTopIds.map(src => ({
     type: jsPsychHtmlSliderResponse,
     stimulus: `
       <div style="text-align:center">
@@ -863,8 +863,9 @@ const endScreen = {
         const groundTruth = encodingTrial.derivedGroundTruth;
         const encodingMatches = encodingTrial.encoding_matches;
         const retrievalMatches = retrievalTrial.participantMapping;
+        const encodingTopOrder = encodingTrial.encodingTopOrder;
         
-        set.tops.forEach(topImage => {
+        encodingTopOrder.forEach(topImage => {
           const encodingMatch = encodingMatches.find(m => m.top_image === topImage);
           const confidence = confidenceRatings.find(r => r.topImage === topImage)?.response || null;
           const encodingCorrect = encodingMatch ? encodingMatch.is_correct : null;
