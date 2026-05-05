@@ -265,13 +265,16 @@ function deriveGroundTruth(topIds, shuffledBottomIds, selectionMap, forceCorrect
 function MatchingEncodingTrial(set) {
   const topIds = set.tops;
   const bottomIds = set.bots;
-  const shuffledBottomIds = shuffle([...bottomIds]);
+  let shuffledBottomIds = null;
 
- const encoding = {
+  const encoding = {
     type: jsPsychHtmlButtonResponse,
     stimulus: () => {
+      if (!shuffledBottomIds) {
+        shuffledBottomIds = shuffle([...bottomIds]);
+      }
       
-  const topPool = topIds.map(src => `
+      const topPool = topIds.map(src => `
         <div class="top-card" draggable="true" data-top="${src}">
           ${imgHTML(src)}
         </div>
@@ -375,38 +378,23 @@ function MatchingEncodingTrial(set) {
     derivedGroundTruth: groundTruth,
     encoding_matches: encodingMatches,
     encodingBottomOrder: shuffledBottomIds,
-    encodingSlotOrder: encodingSlotOrder
+    encodingSlotOrder: encodingSlotOrder,
+    originalTopOrder: topIds
   });
 });
     }
   };
 
-const last = jsPsych.data.get().last(1).values()[0];
+  const encodingFeedback = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const last = jsPsych.data.get().last(1).values()[0];
+      const selectionMap = last.participantMapping;
+      const groundTruth = last.derivedGroundTruth;
+      const encodingBottomOrder = last.encodingBottomOrder;
+      const originalTopOrder = last.originalTopOrder;
 
-const encodingMatches = last.encoding_matches;
-
-// Force canonical order using original set order
-const orderedMatches = set.tops.map(topId =>
-  encodingMatches.find(m => m.top_image === topId)
-);
-
-const topRow = orderedMatches.map(m => {
-  const src = m.top_image;
-  const isCorrect = m.is_correct === 1;
-
-  const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-  const badge = isCorrect
-    ? '<div class="badge correct">✓</div>'
-    : '<div class="badge incorrect">✗</div>';
-
-  return `
-    <div class="top-card ${cls}">
-      ${badge}
-      ${imgHTML(src)}
-    </div>
-  `;
-}).join('');
-      
+      const topRow = originalTopOrder.map(src => {
         const chosenBottom = selectionMap[src];
         const isCorrect = groundTruth[src] === chosenBottom;
         const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
@@ -570,7 +558,8 @@ function MatchingRetrievalTrial(set) {
           participantMapping: selectionMap,
           groundTruthUsed: groundTruth,
           slotToTop,
-          shuffledBots
+          shuffledBots,
+          shuffledTops
         });
       });
     }
@@ -582,6 +571,7 @@ function MatchingRetrievalTrial(set) {
       const last = jsPsych.data.get().last(1).values()[0];
       const slotToTop = last.slotToTop || [];
       const botsOrder = last.shuffledBots;
+      const topsOrder = last.shuffledTops;
       const gt = last.groundTruthUsed;
 
       console.log('Feedback: gt =', gt);
@@ -605,6 +595,10 @@ function MatchingRetrievalTrial(set) {
         `;
       }).join('');
 
+      const topRow = topsOrder.map(src => `
+        <div class="top-card">${imgHTML(src)}</div>
+      `).join('');
+
       const bottoms = botsOrder.map(src => `
         <div class="img-cell">${imgHTML(src)}</div>
       `).join('');
@@ -613,6 +607,7 @@ function MatchingRetrievalTrial(set) {
         <div>
           <h3 class="row-title">Retrieval Feedback — ${set.instruction}</h3>
           <p class="hint">Your answers are shown in the same positions you placed them. ✓ = correct, ✗ = incorrect.</p>
+          <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
           <div class="row-scroll"><div class="grid">${markedSlots}</div></div>
           <div class="row-scroll"><div class="grid">${bottoms}</div></div>
         </div>
