@@ -389,44 +389,48 @@ function MatchingEncodingTrial(set) {
     }
   };
 
-  const encodingFeedback = {
-    type: jsPsychHtmlButtonResponse,
-    stimulus: () => {
-      const last = jsPsych.data.get().last(1).values()[0];
-      const selectionMap = last.participantMapping;
-      const groundTruth = last.derivedGroundTruth;
-      const encodingBottomOrder = last.encodingBottomOrder;
-      const encodingTopOrder = last.encodingTopOrder;
+const encodingFeedback = {
+  type: jsPsychHtmlButtonResponse,
+  stimulus: () => {
+    const last = jsPsych.data.get().last(1).values()[0];
+    const selectionMap = last.participantMapping;
+    const groundTruth = last.derivedGroundTruth;
+    const encodingBottomOrder = last.encodingBottomOrder;
+    const encodingSlotOrder = last.encodingSlotOrder;
 
-      const topRow = encodingTopOrder.map(src => {
-        const chosenBottom = selectionMap[src];
-        const isCorrect = groundTruth[src] === chosenBottom;
-        const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-        const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-        return `
-          <div class="top-card ${cls}">
-            ${badge}
-            ${imgHTML(src)}
-          </div>
-        `;
-      }).join('');
-
-      const bottoms = encodingBottomOrder.map(src => `
-        <div class="img-cell">${imgHTML(src)}</div>
-      `).join('');
-
+    // Build top row based on slot positions (where user placed them)
+    const topRow = encodingSlotOrder.map(topId => {
+      if (!topId) {
+        return `<div class="top-card" style="opacity:0;pointer-events:none;"></div>`;
+      }
+      const chosenBottom = selectionMap[topId];
+      const isCorrect = groundTruth[topId] === chosenBottom;
+      const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
       return `
-        <div>
-          <h3 class="row-title">Feedback — ${set.instruction}</h3>
-          <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
-          <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
-          <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+        <div class="top-card ${cls}">
+          ${badge}
+          ${imgHTML(topId)}
         </div>
       `;
-    },
-    choices: ['OK'],
-    data: { setId: set.setId, phase: 'encoding_feedback' }
-  };
+    }).join('');
+
+    const bottoms = encodingBottomOrder.map(src => `
+      <div class="img-cell">${imgHTML(src)}</div>
+    `).join('');
+
+    return `
+      <div>
+        <h3 class="row-title">Feedback — ${set.instruction}</h3>
+        <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+        <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
+        <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+      </div>
+    `;
+  },
+  choices: ['OK'],
+  data: { setId: set.setId, phase: 'encoding_feedback' }
+};
 
   const ratings = shuffledTopIds.map(src => ({
     type: jsPsychHtmlSliderResponse,
