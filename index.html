@@ -266,6 +266,7 @@ function MatchingEncodingTrial(set) {
   const topIds = set.tops;
   const bottomIds = set.bots;
   let shuffledBottomIds = null;
+  let shuffledTopIds = null;
 
   const encoding = {
     type: jsPsychHtmlButtonResponse,
@@ -273,8 +274,11 @@ function MatchingEncodingTrial(set) {
       if (!shuffledBottomIds) {
         shuffledBottomIds = shuffle([...bottomIds]);
       }
+      if (!shuffledTopIds) {
+        shuffledTopIds = shuffle([...topIds]);
+      }
       
-      const topPool = topIds.map(src => `
+      const topPool = shuffledTopIds.map(src => `
         <div class="top-card" draggable="true" data-top="${src}">
           ${imgHTML(src)}
         </div>
@@ -379,7 +383,7 @@ function MatchingEncodingTrial(set) {
     encoding_matches: encodingMatches,
     encodingBottomOrder: shuffledBottomIds,
     encodingSlotOrder: encodingSlotOrder,
-    originalTopOrder: topIds
+    encodingTopOrder: shuffledTopIds
   });
 });
     }
@@ -392,9 +396,9 @@ function MatchingEncodingTrial(set) {
       const selectionMap = last.participantMapping;
       const groundTruth = last.derivedGroundTruth;
       const encodingBottomOrder = last.encodingBottomOrder;
-      const originalTopOrder = last.originalTopOrder;
+      const encodingTopOrder = last.encodingTopOrder;
 
-      const topRow = originalTopOrder.map(src => {
+      const topRow = encodingTopOrder.map(src => {
         const chosenBottom = selectionMap[src];
         const isCorrect = groundTruth[src] === chosenBottom;
         const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
@@ -576,6 +580,19 @@ function MatchingRetrievalTrial(set) {
 
       console.log('Feedback: gt =', gt);
 
+      const topRow = topsOrder.map(src => {
+        const chosenBottom = gt[src];
+        const isCorrect = chosenBottom !== null && chosenBottom !== undefined;
+        const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
+        const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+        return `
+          <div class="top-card ${cls}">
+            ${badge}
+            ${imgHTML(src)}
+          </div>
+        `;
+      }).join('');
+
       const markedSlots = botsOrder.map((botId, i) => {
         const topId = slotToTop[i];
         if (!topId) {
@@ -594,10 +611,6 @@ function MatchingRetrievalTrial(set) {
           </div>
         `;
       }).join('');
-
-      const topRow = topsOrder.map(src => `
-        <div class="top-card">${imgHTML(src)}</div>
-      `).join('');
 
       const bottoms = botsOrder.map(src => `
         <div class="img-cell">${imgHTML(src)}</div>
