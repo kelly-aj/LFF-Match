@@ -914,7 +914,7 @@ const endScreen = {
     const fillerSummary = fillerTasks.map(task => ({
       tag: task.fillerTag,
       word_count: countWords(task.text),
-      text: task.text,
+      text_preview: task.text.substring(0,100),
       reaction_time_ms: task.rt,
       reaction_time_sec: (task.rt / 1000).toFixed(2)
     }));
