@@ -401,15 +401,18 @@ const encodingFeedback = {
     const encodingBottomOrder = last.encodingBottomOrder;
     const encodingSlotOrder = last.encodingSlotOrder;
 
-    // Build top row based on slot positions (where user placed them)
     const topRow = encodingSlotOrder.map(topId => {
       if (!topId) {
         return `<div class="top-card" style="opacity:0;pointer-events:none;"></div>`;
       }
+
       const chosenBottom = selectionMap[topId];
       const isCorrect = groundTruth[topId] === chosenBottom;
       const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
+      const badge = isCorrect
+        ? '<div class="badge correct">✓</div>'
+        : '<div class="badge incorrect">✗</div>';
+
       return `
         <div class="top-card ${cls}">
           ${badge}
@@ -425,19 +428,24 @@ const encodingFeedback = {
     return `
       <div>
         <h3 class="row-title">Feedback — ${set.instruction}</h3>
-        <p class="hint">Green ✓ indicates a correct match; Red ✗ indicates an incorrect match. Click OK to continue.</p>
+        <p class="hint">Green ✓ = correct, Red ✗ = incorrect</p>
         <div class="row-scroll"><div id="top-pool">${topRow}</div></div>
-        <div class="row-scroll"><div class="grid" id="bottom-row">${bottoms}</div></div>
+        <div class="row-scroll"><div class="grid">${bottoms}</div></div>
       </div>
     `;
   },
+
   choices: ['OK'],
-  data: { setId: set.setId, phase: 'encoding_feedback' },
+
+  data: {
+    setId: set.setId,
+    phase: 'encoding_feedback'
+  },
 
   on_finish: (data) => {
-    // jsPsych automatically provides RT for button response trials
     data.feedback_rt_ms = data.rt;
   }
+};
 
   const ratings = (() => {
     const topsToUse = ShuffledTopsBySet[set.setId] || topIds;
