@@ -592,19 +592,13 @@ function MatchingRetrievalTrial(set) {
     console.log('Feedback: gt =', gt);
     console.log('Feedback: participantMapping =', participantMapping);
 
-    const topRow = topsOrder.map(src => {
-      const chosenBottom = participantMapping[src];
-      const expectedBottom = gt[src];
-      const isCorrect = chosenBottom === expectedBottom;
-      const cls = isCorrect ? 'outline-correct' : 'outline-incorrect';
-      const badge = isCorrect ? '<div class="badge correct">✓</div>' : '<div class="badge incorrect">✗</div>';
-      return `
-        <div class="top-card ${cls}">
-          ${badge}
-          ${imgHTML(src)}
-        </div>
-      `;
-    }).join('');
+const topRow = topsOrder.map(src => {
+  return `
+    <div class="top-card">
+      ${imgHTML(src)}
+    </div>
+  `;
+}).join('');
 
     const markedSlots = botsOrder.map((botId, i) => {
       const topId = slotToTop[i];
