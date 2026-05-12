@@ -904,14 +904,14 @@ const endScreen = {
     });
     
     // Get filler task data with word counts
-    const fillerTasks = allData.filter(trial => trial.phase === 'filler');
-    const fillerSummary = fillerTasks.map(task => ({
-      tag: task.fillerTag,
-      word_count: countWords(task.text),
-      text_preview: task.text.substring(0,100),
-      reaction_time_ms: task.rt,
-      reaction_time_sec: (task.rt / 1000).toFixed(2)
-    }));
+    // Get filler task data with word counts and RT in seconds only
+const fillerTasks = allData.filter(trial => trial.phase === 'filler');
+
+const fillerSummary = fillerTasks.map(task => ({
+  tag: task.fillerTag,
+  wc: countWords(task.text),
+  rt_sec: (task.rt / 1000).toFixed(2)
+}));
     
     // Get attention check results
     const attentionChecks = allData.filter(trial => trial.phase === 'attention_check' || trial.phase === 'attention_check_neutral');
